@@ -1,0 +1,203 @@
+import pygame
+import math
+from settings import *
+
+class Player(pygame.sprite.Sprite):
+    def __init__(self, pos, groups, enemy_sprites, create_projectile_func):
+        super().__init__(groups)
+        # No futuro, substituiremos isso pela imagem do Pixel Art
+        self.image = pygame.Surface((TILE_SIZE, TILE_SIZE))
+        self.image.fill(COLOR_PLAYER)
+        
+        # Hitbox e Posicionamento
+        self.rect = self.image.get_rect(topleft=pos)
+        
+        # Vetor de movimento (x, y)
+        self.direction = pygame.math.Vector2()
+        self.speed = PLAYER_SPEED
+
+        self.integrity = PLAYER_MAX_INTEGRITY
+        self.vulnerable = True
+        self.hurt_time = 0
+        self.image_alpha = 255 # Para o efeito de piscar
+
+        # Novas referências para o combate
+        self.enemy_sprites = enemy_sprites 
+        self.create_projectile = create_projectile_func # Função callback para criar o tiro
+        
+        # Cooldown do tiro
+        self.can_shoot = True
+        self.shoot_time = 0
+
+    def input(self):
+        keys = pygame.key.get_pressed()
+
+        # Movimento WASD ou Setas
+        if keys[pygame.K_UP] or keys[pygame.K_w]:
+            self.direction.y = -1
+        elif keys[pygame.K_DOWN] or keys[pygame.K_s]:
+            self.direction.y = 1
+        else:
+            self.direction.y = 0
+
+        if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
+            self.direction.x = 1
+        elif keys[pygame.K_LEFT] or keys[pygame.K_a]:
+            self.direction.x = -1
+        else:
+            self.direction.x = 0
+
+    def move(self, speed):
+        # Normalizar vetor (para não andar mais rápido na diagonal)
+        if self.direction.magnitude() != 0:
+            self.direction = self.direction.normalize()
+        
+        self.rect.center += self.direction * speed
+
+    def take_damage(self, amount):
+        if self.vulnerable:
+            self.integrity -= amount
+            self.vulnerable = False
+            self.hurt_time = pygame.time.get_ticks()
+            print(f"ALERTA DE SEGURANÇA: Integridade em {self.integrity}%")
+            
+            # Efeito visual de dano (Muda cor para branco momentaneamente)
+            self.image.fill((255, 255, 255))
+    
+    def cooldowns(self):
+        current_time = pygame.time.get_ticks()
+
+        if not self.vulnerable:
+            # Verifica se o tempo de invencibilidade acabou
+            if current_time - self.hurt_time >= PLAYER_INVINCIBILITY:
+                self.vulnerable = True
+                self.image.fill(COLOR_PLAYER) # Volta a cor normal
+                self.image.set_alpha(255) # Garante opacidade total
+            else:
+                # Efeito de piscar (Flicker) enquanto invulnerável
+                # Alterna a transparência baseado no tempo (senoide simples simulada)
+                if (current_time // 100) % 2 == 0:
+                    self.image.set_alpha(100) # Transparente
+                else:
+                    self.image.set_alpha(255) # Opaco
+
+    def check_death(self):
+        if self.integrity <= 0:
+            # Por enquanto, apenas fecha o jogo, depois faremos uma tela de Game Over
+            print("FATAL ERROR: SYSTEM CRASHED")
+            pygame.quit()
+            exit()
+        
+    def get_nearest_enemy(self):
+        # Cria uma lista de inimigos e suas distâncias
+        if not self.enemy_sprites:
+            return None
+            
+        nearest_enemy = None
+        min_distance = float('inf') # Começa com infinito
+        
+        player_vec = pygame.math.Vector2(self.rect.center)
+        
+        for enemy in self.enemy_sprites:
+            enemy_vec = pygame.math.Vector2(enemy.rect.center)
+            # distance_to é uma função otimizada do Pygame
+            dist = player_vec.distance_to(enemy_vec)
+            
+            if dist < min_distance:
+                min_distance = dist
+                nearest_enemy = enemy
+                
+        return nearest_enemy
+
+    def auto_shoot(self):
+        current_time = pygame.time.get_ticks()
+        
+        # Verifica Cooldown
+        if self.can_shoot:
+            target = self.get_nearest_enemy()
+            
+            if target: # Só atira se tiver inimigo
+                self.can_shoot = False
+                self.shoot_time = current_time
+                
+                # Calcular direção do tiro
+                player_vec = pygame.math.Vector2(self.rect.center)
+                target_vec = pygame.math.Vector2(target.rect.center)
+                
+                # Vetor direção = Destino - Origem
+                direction = (target_vec - player_vec).normalize()
+                
+                # Chama a função lá do main para criar o tiro
+                self.create_projectile(self.rect.center, direction)
+
+    def weapon_cooldowns(self):
+        if not self.can_shoot:
+            current_time = pygame.time.get_ticks()
+            if current_time - self.shoot_time >= WEAPON_COOLDOWN:
+                self.can_shoot = True
+
+    def update(self):
+        self.input()
+        self.move(self.speed)
+        self.cooldowns()      # Invencibilidade
+        self.weapon_cooldowns() # Recarga da arma
+        self.auto_shoot()     # Tenta atirar
+        self.check_death()
+
+class Malware(pygame.sprite.Sprite):
+    def __init__(self, pos, player, groups):
+        super().__init__(groups)
+        
+        # Visual (Placeholder: Quadrado Vermelho com "Glitch")
+        self.image = pygame.Surface((ENEMY_SIZE, ENEMY_SIZE))
+        self.image.fill(COLOR_ENEMY)
+        
+        self.rect = self.image.get_rect(center=pos)
+        
+        # Mecânica de Perseguição
+        self.player = player # Referência ao alvo (o servidor)
+        self.speed = ENEMY_SPEED
+        self.direction = pygame.math.Vector2()
+
+    def hunt_player(self):
+        # Vetor do Inimigo até o Player
+        player_vector = pygame.math.Vector2(self.player.rect.center)
+        enemy_vector = pygame.math.Vector2(self.rect.center)
+        
+        # Subtrair vetores dá a direção (Distância)
+        distance = player_vector - enemy_vector
+
+        # Normalizar: Transforma a distância em direção pura (valor entre -1 e 1)
+        if distance.magnitude() > 0:
+            self.direction = distance.normalize()
+        else:
+            self.direction = pygame.math.Vector2()
+
+    def update(self):
+        self.hunt_player()
+        # Move o inimigo na direção calculada
+        self.rect.center += self.direction * self.speed
+
+class Projectile(pygame.sprite.Sprite):
+    def __init__(self, pos, direction, groups):
+        super().__init__(groups)
+        
+        # Visual: Um pequeno "bit" quadrado
+        self.image = pygame.Surface((10, 10))
+        self.image.fill(COLOR_PROJECTILE)
+        self.rect = self.image.get_rect(center=pos)
+        
+        # Física
+        self.direction = direction
+        self.speed = PROJECTILE_SPEED
+        
+        # Tempo de vida (para não lagar o jogo com tiros infinitos voando)
+        self.spawn_time = pygame.time.get_ticks()
+
+    def update(self):
+        # Move o projétil
+        self.rect.center += self.direction * self.speed
+        
+        # Checa se o tempo de vida acabou
+        if pygame.time.get_ticks() - self.spawn_time > PROJECTILE_LIFETIME:
+            self.kill() # Remove o sprite de todos os grupos e libera memória
