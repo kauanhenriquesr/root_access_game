@@ -47,6 +47,27 @@ class Game:
         
         Malware((x, y), self.player, [self.visible_sprites, self.active_sprites, self.enemy_sprites])
 
+
+    def pause_menu(self):
+        paused = True
+        font = pygame.font.SysFont(None, 74)
+        text = font.render('Pause Básico', True, COLOR_TEXT)
+        text_rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+        
+        while paused:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        paused = False
+            
+            self.screen.fill(COLOR_BG)
+            self.screen.blit(text, text_rect)
+            pygame.display.update()
+            self.clock.tick(15)
+
     def run(self):
         while True:
             for event in pygame.event.get():
@@ -57,6 +78,11 @@ class Game:
                 # Quando o timer disparar, crie um inimigo
                 if event.type == self.enemy_spawn_event:
                     self.spawn_enemy()
+                
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        # Jogo pausado
+                        self.pause_menu()
             
             self.screen.fill(COLOR_BG)
             self.active_sprites.update()
