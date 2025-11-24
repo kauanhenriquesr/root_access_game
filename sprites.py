@@ -154,10 +154,16 @@ class Malware(pygame.sprite.Sprite):
         
         self.rect = self.image.get_rect(center=pos)
         
+        self.health = ENEMY_HEALTH
+
         # Mecânica de Perseguição
         self.player = player # Referência ao alvo (o servidor)
         self.speed = ENEMY_SPEED
         self.direction = pygame.math.Vector2()
+
+        # Dano ticar
+        self.hit_time = 0
+        self.is_flashing = False
 
     def hunt_player(self):
         # Vetor do Inimigo até o Player
@@ -173,10 +179,30 @@ class Malware(pygame.sprite.Sprite):
         else:
             self.direction = pygame.math.Vector2()
 
+    def take_damage(self, amount):
+        self.health -= amount
+        self.is_flashing = True
+        self.hit_time = pygame.time.get_ticks()
+
+        if self.health <= 0:
+            self.kill()
+    
+    def visuals(self):
+        if self.is_flashing:
+            current_time = pygame.time.get_ticks()
+            # Acusador de dano
+            self.image.fill((255, 255, 255))
+
+            # Duração do efeito
+            if current_time - self.hit_time > 100:
+                self.is_flashing = False
+                self.image.fill(COLOR_ENEMY)
+    
     def update(self):
         self.hunt_player()
         # Move o inimigo na direção calculada
         self.rect.center += self.direction * self.speed
+        self.visuals()
 
 class Projectile(pygame.sprite.Sprite):
     def __init__(self, pos, direction, groups):

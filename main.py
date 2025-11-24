@@ -97,13 +97,10 @@ class Game:
             # 2. Tiro bate no Inimigo (Morte do Malware)
             # groupcollide(grupo1, grupo2, kill1, kill2)
             # kill1=True (Tiro some), kill2=True (Inimigo morre)
-            hits = pygame.sprite.groupcollide(self.projectile_sprites, self.enemy_sprites, True, True)
+            hits = pygame.sprite.groupcollide(self.projectile_sprites, self.enemy_sprites, True, False)
             
-            if hits:
-                # Opcional: Aqui futuramente adicionaremos XP e Sons
-                # hits retorna um dicionário, podemos contar quantos morreram
-                for projectile, enemies_hit in hits.items():
-                    print(f"Malware eliminado! Memória liberada.")
+            for projectile, enemies_hit in hits.items():
+                    for enemy in enemies_hit: enemy.take_damage(PROJECTILE_DAMAGE)
 
             self.visible_sprites.custom_draw(self.player)
             self.draw_ui()
