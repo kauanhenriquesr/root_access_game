@@ -229,8 +229,10 @@ class DialogueSystem:
         pygame.draw.rect(self.display_surface, (0, 200, 200), avatar_rect, 1)
         
         if hasattr(self.player, 'image'):
-             img_rect = self.player.image.get_rect(center=avatar_rect.center)
-             self.display_surface.blit(self.player.image, img_rect)
+             scale = avatar_size / self.player.image.get_width()
+             image = pygame.transform.scale(self.player.base_image, (int(self.player.image.get_width() * scale), int(self.player.image.get_height() * scale)))
+             img_rect = image.get_rect(center=avatar_rect.center)
+             self.display_surface.blit(image, img_rect)
         else:
              pygame.draw.rect(self.display_surface, COLOR_PLAYER, avatar_rect.inflate(-20, -20))
 
@@ -274,7 +276,7 @@ class GameOverScreen:
         title_rect = title_surf.get_rect(center=(center_x, 150))
         self.display_surface.blit(title_surf, title_rect)
         
-        # Mensagem Principal (A pedida)
+        # Mensagem Principal
         msg_lines = [
             "FATAL ERROR: Integridade do Servidor Comprometida.",
             "--------------------------------------------------",

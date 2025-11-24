@@ -22,7 +22,7 @@ class Game:
         self.setup_system()
 
         # UI Elements
-        self.dialogue_system = DialogueSystem(self.screen)
+        self.dialogue_system = DialogueSystem(self.player)
         self.upgrade_console = UpgradeConsole(self.player, self.dialogue_system)
         self.game_over_screen = GameOverScreen()
         
@@ -276,7 +276,7 @@ class CameraGroup(pygame.sprite.Group):
         self.offset.y = player.rect.centery - HEIGHT // 2
 
         # Desenhar o chão deslocado
-        bg_offset = (-self.offset.x, -self.offset.y) # Simples para teste
+        bg_offset = (-self.offset.x, -self.offset.y)
         self.display_surface.blit(self.bg_grid, bg_offset)
 
         # Desenhar os sprites com o deslocamento

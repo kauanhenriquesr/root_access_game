@@ -5,9 +5,18 @@ from settings import *
 class Player(pygame.sprite.Sprite):
     def __init__(self, pos, groups, enemy_sprites, create_projectile_func):
         super().__init__(groups)
-        # Substituir isso pela imagem Pixel Art
-        self.image = pygame.Surface((TILE_SIZE, TILE_SIZE))
-        self.image.fill(COLOR_PLAYER)
+
+        try:
+            loaded = pygame.image.load("tux.webp").convert_alpha()
+            # Armazena a imagem base e escala para o tamanho do tile
+            self.base_image = pygame.transform.scale(loaded, (TILE_SIZE, TILE_SIZE))
+        except Exception:
+            # Fallback: superfície simples colorida
+            self.base_image = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
+            self.base_image.fill(COLOR_PLAYER)
+
+        # Imagem atual usada para efeitos (cópia de base_image)
+        self.image = self.base_image.copy()
         
         # Hitbox e Posicionamento
         self.rect = self.image.get_rect(topleft=pos)
@@ -76,8 +85,13 @@ class Player(pygame.sprite.Sprite):
             self.hurt_time = pygame.time.get_ticks()
             print(f"ALERTA DE SEGURANÇA: Integridade em {self.integrity}%")
             
-            # Efeito visual de dano (Muda cor para branco momentaneamente)
-            self.image.fill((255, 255, 255))
+            # Efeito visual de dano (overlay branco momentâneo)
+            flash = self.base_image.copy()
+            # Adiciona branco por cima para simular flash
+            white = pygame.Surface(flash.get_size(), pygame.SRCALPHA)
+            white.fill((255, 255, 255, 180))
+            flash.blit(white, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
+            self.image = flash
     
     def cooldowns(self):
         current_time = pygame.time.get_ticks()
@@ -86,15 +100,20 @@ class Player(pygame.sprite.Sprite):
             # Verifica se o tempo de invencibilidade acabou
             if current_time - self.hurt_time >= PLAYER_INVINCIBILITY:
                 self.vulnerable = True
-                self.image.fill(COLOR_PLAYER) # Volta a cor normal
-                self.image.set_alpha(255) # Garante opacidade total
+                # Restaura a imagem base e garante opacidade total
+                self.image = self.base_image.copy()
+                self.image.set_alpha(255)
             else:
                 # Efeito de piscar (Flicker) enquanto invulnerável
                 # Alterna a transparência baseado no tempo (senoide simples simulada)
                 if (current_time // 100) % 2 == 0:
-                    self.image.set_alpha(100) # Transparente
+                    temp = self.base_image.copy()
+                    temp.set_alpha(100)
+                    self.image = temp
                 else:
-                    self.image.set_alpha(255) # Opaco
+                    temp = self.base_image.copy()
+                    temp.set_alpha(255)
+                    self.image = temp
         
     def get_nearest_enemy(self):
         # Cria uma lista de inimigos e suas distâncias
