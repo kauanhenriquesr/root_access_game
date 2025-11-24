@@ -57,7 +57,6 @@ class Game:
 
 
     def pause(self):
-        self.game_paused = True
         self.pause_menu = True
         font = pygame.font.SysFont(None, 74)
         text = font.render('Pause Básico', True, COLOR_TEXT)
@@ -70,7 +69,6 @@ class Game:
                     sys.exit()
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
-                        self.game_paused = False
                         self.pause_menu = False
             self.screen.fill(COLOR_BG)
             self.screen.blit(text, text_rect)

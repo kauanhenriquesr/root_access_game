@@ -42,50 +42,76 @@ class UpgradeConsole:
             self.player.projectile_damage += upgrade['value']
 
     def display(self):
-        # 1. Desenhar Fundo Preto (Terminal)
-        # Cria uma janela menor que a tela cheia
+        # 1. Configuração da Janela
         width = 700
         height = 500
         x = (WIDTH - width) // 2
         y = (HEIGHT - height) // 2
         
         bg_rect = pygame.Rect(x, y, width, height)
-        pygame.draw.rect(self.display_surface, (0, 0, 0), bg_rect)         # Fundo Preto
-        pygame.draw.rect(self.display_surface, (0, 255, 0), bg_rect, 3)    # Borda Verde Hacker
+        pygame.draw.rect(self.display_surface, (0, 0, 0), bg_rect)
+        pygame.draw.rect(self.display_surface, (0, 255, 0), bg_rect, 3)
         
-        # 2. Cabeçalho do Terminal
+        # 2. Cabeçalho (Igual anterior)
         header_text = f"root@server:~/updates# install_patch --level={self.player.level}"
         header_surf = self.font.render(header_text, True, (0, 255, 0))
         self.display_surface.blit(header_surf, (x + 20, y + 20))
 
-        # 3. Desenhar Opções
+        # 3. Loop das Opções
         mouse_pos = pygame.mouse.get_pos()
-        self.rects = [] # Reinicia a lista de colisão para este frame
+        self.rects = []
 
         for index, option in enumerate(self.options):
-            # Calcular posição Y de cada item
-            item_y = y + 100 + (index * 100)
+            item_y = y + 100 + (index * 110) # Aumentei um pouco o espaçamento vertical
             
-            # Criar retângulo da opção
-            item_rect = pygame.Rect(x + 20, item_y, width - 40, 80)
+            item_rect = pygame.Rect(x + 20, item_y, width - 40, 90)
             self.rects.append(item_rect)
             
-            # Hover Effect (Muda a cor do fundo se passar o mouse)
-            color_text = (0, 255, 0)
+            # Hover Effect
+            color_text = (0, 255, 0)     # Verde Hacker
+            color_desc = (0, 180, 0)     # Verde Escuro
+            color_stats = (0, 255, 255)  # Ciano (para os números destacarem)
+            
             if item_rect.collidepoint(mouse_pos):
-                pygame.draw.rect(self.display_surface, (0, 50, 0), item_rect) # Fundo verde escuro
-                color_text = (200, 255, 200) # Texto fica mais claro
-                # Desenha cursor >
+                pygame.draw.rect(self.display_surface, (0, 50, 0), item_rect)
+                color_text = (200, 255, 200)
                 cursor = self.font.render(">", True, (0, 255, 0))
                 self.display_surface.blit(cursor, (x + 5, item_y + 10))
 
-            # Texto do Nome (Comando)
+            # Nome e Descrição
             name_surf = self.header_font.render(f"[{index+1}] {option['name']}", True, color_text)
-            self.display_surface.blit(name_surf, (x + 30, item_y + 10))
+            self.display_surface.blit(name_surf, (x + 30, item_y + 5))
             
-            # Texto da Descrição
-            desc_surf = self.font.render(f"    >> {option['desc']}", True, (0, 180, 0))
-            self.display_surface.blit(desc_surf, (x + 30, item_y + 45))
+            desc_surf = self.font.render(f"    >> {option['desc']}", True, color_desc)
+            self.display_surface.blit(desc_surf, (x + 30, item_y + 35))
+
+            # --- 4. CALCULAR E DESENHAR PREVIEW DOS STATS ---
+            current_val = 0
+            new_val = 0
+            unit = ""
+            
+            # Lógica de previsão baseada no tipo (Mesma lógica do apply_upgrade)
+            if option['type'] == 'speed':
+                current_val = self.player.speed
+                new_val = current_val * option['value']
+                unit = "px/frame"
+            elif option['type'] == 'cooldown':
+                current_val = self.player.projectile_cooldown
+                new_val = current_val * option['value']
+                unit = "ms (delay)"
+            elif option['type'] == 'health':
+                current_val = self.player.max_integrity
+                new_val = current_val + option['value']
+                unit = "HP"
+            elif option['type'] == 'damage':
+                current_val = self.player.projectile_damage
+                new_val = current_val + option['value']
+                unit = "dmg"
+
+            stat_text = f"    [ UPDATE LOG: {current_val:.1f} -> {new_val:.1f} {unit} ]"
+            
+            stat_surf = self.font.render(stat_text, True, color_stats)
+            self.display_surface.blit(stat_surf, (x + 30, item_y + 60))
 
     def update(self):
         """Retorna True se escolheu algo (para fechar o menu)"""
