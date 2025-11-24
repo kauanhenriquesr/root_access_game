@@ -33,3 +33,9 @@ PROJECTILE_LIFETIME = 1000 # Milissegundos que o tiro dura antes de sumir
 PROJECTILE_DAMAGE = 25
 WEAPON_COOLDOWN = 600      # Cadência de tiro (ms) - Quanto menor, mais rápido
 COLOR_PROJECTILE = (255, 255, 0) # Amarelo (Dados trafegando)
+
+# Configurações de XP (Data)
+COLOR_XP = (0, 255, 255) # Ciano Brilhante
+XP_SIZE = 8
+MAGNET_RADIUS = 150      # Distância em pixels para o item começar a voar até o player
+DATA_VALUE = 10          # Quanto XP cada item dá

@@ -5,7 +5,7 @@ from settings import *
 class Player(pygame.sprite.Sprite):
     def __init__(self, pos, groups, enemy_sprites, create_projectile_func):
         super().__init__(groups)
-        # No futuro, substituiremos isso pela imagem do Pixel Art
+        # Substituir isso pela imagem Pixel Art
         self.image = pygame.Surface((TILE_SIZE, TILE_SIZE))
         self.image.fill(COLOR_PLAYER)
         
@@ -14,9 +14,8 @@ class Player(pygame.sprite.Sprite):
         
         # Vetor de movimento (x, y)
         self.direction = pygame.math.Vector2()
-        self.speed = PLAYER_SPEED
 
-        self.integrity = PLAYER_MAX_INTEGRITY
+        # Stats
         self.vulnerable = True
         self.hurt_time = 0
         self.image_alpha = 255 # Para o efeito de piscar
@@ -28,6 +27,21 @@ class Player(pygame.sprite.Sprite):
         # Cooldown do tiro
         self.can_shoot = True
         self.shoot_time = 0
+
+        # Sistema de LEVEL
+        self.xp = 0
+        self.level = 1
+        self.xp_to_next_level = 100
+
+        # --- Atributos do player ---
+        self.speed = PLAYER_SPEED
+        self.max_integrity = PLAYER_MAX_INTEGRITY
+        self.integrity = self.max_integrity
+
+        # Arma
+        self.projectile_damage = PROJECTILE_DAMAGE
+        self.projectile_cooldown = WEAPON_COOLDOWN
+        self.projectile_speed = PROJECTILE_SPEED
 
     def input(self):
         keys = pygame.key.get_pressed()
@@ -125,15 +139,16 @@ class Player(pygame.sprite.Sprite):
                 target_vec = pygame.math.Vector2(target.rect.center)
                 
                 # Vetor direção = Destino - Origem
-                direction = (target_vec - player_vec).normalize()
-                
+                try: direction = (target_vec - player_vec).normalize()
+                except ValueError:
+                    direction = pygame.math.Vector2(0, 0)
                 # Chama a função lá do main para criar o tiro
                 self.create_projectile(self.rect.center, direction)
 
     def weapon_cooldowns(self):
         if not self.can_shoot:
             current_time = pygame.time.get_ticks()
-            if current_time - self.shoot_time >= WEAPON_COOLDOWN:
+            if current_time - self.shoot_time >= self.projectile_cooldown:
                 self.can_shoot = True
 
     def update(self):
@@ -227,3 +242,39 @@ class Projectile(pygame.sprite.Sprite):
         # Checa se o tempo de vida acabou
         if pygame.time.get_ticks() - self.spawn_time > PROJECTILE_LIFETIME:
             self.kill() # Remove o sprite de todos os grupos e libera memória
+
+class DataDrop(pygame.sprite.Sprite):
+    def __init__(self, pos, player, groups):
+        super().__init__(groups)
+        
+        # Visual: Pequeno quadrado de dados
+        self.image = pygame.Surface((XP_SIZE, XP_SIZE))
+        self.image.fill(COLOR_XP)
+        self.rect = self.image.get_rect(center=pos)
+        
+        # Referências
+        self.player = player
+        self.value = DATA_VALUE
+        
+        # Física do Ímã
+        self.speed = 0
+        self.acceleration = 0.5  # Começa devagar e acelera
+        self.max_speed = 15
+
+    def update(self):
+        # Calcular distância até o player
+        player_vec = pygame.math.Vector2(self.player.rect.center)
+        data_vec = pygame.math.Vector2(self.rect.center)
+        distance = player_vec.distance_to(data_vec)
+        
+        # Se estiver dentro do raio do ímã
+        if distance < MAGNET_RADIUS:
+            # Calcular direção
+            direction = (player_vec - data_vec).normalize()
+            
+            # Aumentar velocidade (Efeito de sucção)
+            if self.speed < self.max_speed:
+                self.speed += self.acceleration
+            
+            # Mover
+            self.rect.center += direction * self.speed

@@ -1,6 +1,7 @@
 import pygame, sys, random, math
 from settings import *
-from sprites import Player, Malware, Projectile
+from sprites import Player, Malware, Projectile, DataDrop
+from ui import UpgradeConsole
 
 class Game:
     def __init__(self):
@@ -15,8 +16,15 @@ class Game:
         self.active_sprites = pygame.sprite.Group()
         self.enemy_sprites = pygame.sprite.Group()
         self.projectile_sprites = pygame.sprite.Group()
+        self.data_sprites = pygame.sprite.Group()
 
+        # Cria o Player
         self.setup_system()
+
+        self.upgrade_console = UpgradeConsole(self.player)
+        self.game_paused = False
+        self.pause_menu = False
+        
 
         self.enemy_spawn_event = pygame.USEREVENT + 1
         pygame.time.set_timer(self.enemy_spawn_event, SPAWN_RATE)
@@ -48,21 +56,22 @@ class Game:
         Malware((x, y), self.player, [self.visible_sprites, self.active_sprites, self.enemy_sprites])
 
 
-    def pause_menu(self):
-        paused = True
+    def pause(self):
+        self.game_paused = True
+        self.pause_menu = True
         font = pygame.font.SysFont(None, 74)
         text = font.render('Pause Básico', True, COLOR_TEXT)
         text_rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
         
-        while paused:
+        while self.pause_menu:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
-                        paused = False
-            
+                        self.game_paused = False
+                        self.pause_menu = False
             self.screen.fill(COLOR_BG)
             self.screen.blit(text, text_rect)
             pygame.display.update()
@@ -76,40 +85,70 @@ class Game:
                     sys.exit()
                 
                 # Quando o timer disparar, crie um inimigo
-                if event.type == self.enemy_spawn_event:
+                if event.type == self.enemy_spawn_event and not self.game_paused:
                     self.spawn_enemy()
                 
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         # Jogo pausado
-                        self.pause_menu()
+                        self.pause()
             
             self.screen.fill(COLOR_BG)
-            self.active_sprites.update()
 
-            # --- COLISÕES ---
+            if self.game_paused:
+
+                 # == Menu de Upgrades ==
+                self.visible_sprites.custom_draw(self.player)
+                self.upgrade_console.display()
+                if self.upgrade_console.update():
+                    self.game_paused = False
             
-            # 1. Inimigo bate no Player (Dano)
-            hit_list = pygame.sprite.spritecollide(self.player, self.enemy_sprites, False)
-            if hit_list:
-                self.player.take_damage(ENEMY_DAMAGE)
+            else: 
+                self.active_sprites.update()
+                # ROTINA NORMAL DE JOGO
+
+                # --- COLISÕES ---
                 
-            # 2. Tiro bate no Inimigo (Morte do Malware)
-            # groupcollide(grupo1, grupo2, kill1, kill2)
-            # kill1=True (Tiro some), kill2=True (Inimigo morre)
-            hits = pygame.sprite.groupcollide(self.projectile_sprites, self.enemy_sprites, True, False)
-            
-            for projectile, enemies_hit in hits.items():
-                    for enemy in enemies_hit: enemy.take_damage(PROJECTILE_DAMAGE)
+                # 1. Inimigo bate no Player (Dano)
+                hit_list = pygame.sprite.spritecollide(self.player, self.enemy_sprites, False)
+                if hit_list:
+                    self.player.take_damage(ENEMY_DAMAGE)
+                    
+                # 2. Tiro bate no Inimigo (Morte do Malware)
+                # groupcollide(grupo1, grupo2, kill1, kill2)
+                # kill1=True (Tiro some), kill2=True (Inimigo morre)
+                hits = pygame.sprite.groupcollide(self.projectile_sprites, self.enemy_sprites, True, False)
+                
+                for projectile, enemies_hit in hits.items():
+                        for enemy in enemies_hit: 
+                            enemy.take_damage(self.player.projectile_damage)
+                            if enemy.health <= 0:
+                                # XP ao matar o inimigo
+                                DataDrop(enemy.rect.center, self.player, [self.visible_sprites, self.active_sprites, self.data_sprites])
 
-            self.visible_sprites.custom_draw(self.player)
-            self.draw_ui()
+                # 3. Player coleta Data (XP)
+                collected_data = pygame.sprite.spritecollide(self.player, self.data_sprites, True)
+                for data in collected_data:
+                    self.player.xp += data.value
+                    # Verifica se o player subiu de nível
+                    if self.player.xp >= self.player.xp_to_next_level:
+                        self.player.level += 1
+                        self.player.xp -= self.player.xp_to_next_level
+                        self.player.xp_to_next_level = int(self.player.xp_to_next_level * 1.5)
+                        print(f"SYSTEM UPGRADE! Nível {self.player.level} alcançado.")
+                        
+                        # Upgrade
+                        self.upgrade_console.generate_options()
+                        self.game_paused = True
+                
+                self.visible_sprites.custom_draw(self.player)
+                self.draw_ui()
 
             pygame.display.update()
             self.clock.tick(FPS)
 
     def draw_ui(self):
-        # Desenha a barra de "Integridade do Sistema"
+        # --- Barra de Vida --- (Integridade do Sistema)
         bar_width = 200
         bar_height = 20
         x = 20
@@ -123,7 +162,7 @@ class Game:
         ratio = self.player.integrity / PLAYER_MAX_INTEGRITY
         current_width = bar_width * ratio
         
-        # Barra de vida atual
+
         # Muda de cor: Verde (seguro) -> Vermelho (crítico)
         if ratio > 0.6:
             color = (0, 255, 0)
@@ -132,12 +171,32 @@ class Game:
         else:
             color = (255, 0, 0)
 
+        
         current_rect = pygame.Rect(x, y, current_width, bar_height)
         pygame.draw.rect(self.screen, color, current_rect)
         
         # Borda da barra (Branca)
         pygame.draw.rect(self.screen, (255, 255, 255), bg_rect, 2)
 
+        # --- Barra de XP ---
+        bar_width = 200
+        bar_height = 10
+        x = 20
+        y = 50
+
+        # Fundo da barra (cinza escuro)
+        bg_rect = pygame.Rect(x, y, bar_width, bar_height)
+        pygame.draw.rect(self.screen, (30, 30, 30), bg_rect)
+        # Cálculo da porcentagem de XP
+        if self.player.xp_to_next_level > 0:
+            xp_ratio = self.player.xp / self.player.xp_to_next_level
+        else: xp_ratio = 0
+
+        current_width = bar_width * xp_ratio
+        current_rect = pygame.Rect(x, y, current_width, bar_height)
+
+        pygame.draw.rect(self.screen, COLOR_XP, current_rect)
+        pygame.draw.rect(self.screen, (255, 255, 255), bg_rect, 1)
 # --- Classe de Câmera Simples ---
 class CameraGroup(pygame.sprite.Group):
     def __init__(self):
