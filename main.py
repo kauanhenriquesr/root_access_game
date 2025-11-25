@@ -1,7 +1,7 @@
 import pygame, sys, random, math
 from settings import *
 from sprites import Player, Malware, Projectile, DataDrop
-from ui import UpgradeConsole
+from ui import UpgradeConsole, DialogueSystem
 
 class Game:
     def __init__(self):
@@ -21,9 +21,16 @@ class Game:
         # Cria o Player
         self.setup_system()
 
-        self.upgrade_console = UpgradeConsole(self.player)
+        # UI Elements
+        self.dialogue_system = DialogueSystem(self.screen)
+        self.upgrade_console = UpgradeConsole(self.player, self.dialogue_system)
         self.game_paused = False
         self.pause_menu = False
+
+        # Historia inicial
+        self.show_story = True
+        self.story_text = "ALERTA CRÍTICO: Invasão detectada no Setor 7. Protocolo de defesa iniciado. Proteja o Kernel a todo custo."
+        self.start_time = pygame.time.get_ticks()
         
 
         self.enemy_spawn_event = pygame.USEREVENT + 1
@@ -132,7 +139,7 @@ class Game:
                     if self.player.xp >= self.player.xp_to_next_level:
                         self.player.level += 1
                         self.player.xp -= self.player.xp_to_next_level
-                        self.player.integrity = self.player.max_integrity
+                        
                         self.player.xp_to_next_level = int(self.player.xp_to_next_level * 1.5)
                         print(f"SYSTEM UPGRADE! Nível {self.player.level} alcançado.")
                         
@@ -142,6 +149,12 @@ class Game:
                 
                 self.visible_sprites.custom_draw(self.player)
                 self.draw_ui()
+
+                if pygame.time.get_ticks() - self.start_time < 5000:
+                     self.dialogue_system.execute(
+                         self.story_text, 
+                         "TUX AI [ALERTA DE INTRUSÃO]:"
+                     )
 
             pygame.display.update()
             self.clock.tick(FPS)
@@ -158,7 +171,7 @@ class Game:
         pygame.draw.rect(self.screen, (30, 30, 30), bg_rect)
 
         # Cálculo da porcentagem de vida
-        ratio = self.player.integrity / PLAYER_MAX_INTEGRITY
+        ratio = self.player.integrity / self.player.max_integrity
         current_width = bar_width * ratio
         
 
