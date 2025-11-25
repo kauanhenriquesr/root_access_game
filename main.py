@@ -29,9 +29,11 @@ class Game:
 
         # Historia inicial
         self.show_story = True
-        self.story_text = "ALERTA CRÍTICO: Invasão detectada no Setor 7. Protocolo de defesa iniciado. Proteja o Kernel a todo custo."
+        self.story_text = "Olá estagiário! Sei que é seu primeiro dia, mas estamos sofrendo invasão de malwares. Use suas habilidades para eliminar as ameaças e fortalecer nossa segurança. A empresa INTEIRA DEPENDE de você!"
         self.start_time = pygame.time.get_ticks()
         
+        # Quantificador de inimigos derrotados
+        self.enemies_killed = 0
 
         self.enemy_spawn_event = pygame.USEREVENT + 1
         pygame.time.set_timer(self.enemy_spawn_event, SPAWN_RATE)
@@ -150,11 +152,17 @@ class Game:
                 self.visible_sprites.custom_draw(self.player)
                 self.draw_ui()
 
-                if pygame.time.get_ticks() - self.start_time < 5000:
+                if pygame.time.get_ticks() - self.start_time < 10000:
                      self.dialogue_system.execute(
                          self.story_text, 
                          "TUX AI [ALERTA DE INTRUSÃO]:"
                      )
+                
+                if self.enemies_killed >= 50:
+                    self.dialogue_system.execute(
+                        "Parabéns! Você eliminou 50 malwares e fortaleceu a segurança do servidor. Continue assim!",
+                        "TUX AI [MENSAGEM DE SISTEMA]:"
+                    )
 
             pygame.display.update()
             self.clock.tick(FPS)
