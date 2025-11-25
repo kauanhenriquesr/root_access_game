@@ -6,26 +6,48 @@ class UpgradeConsole:
     def __init__(self, player):
         self.player = player
         self.display_surface = pygame.display.get_surface()
-        # Fonte Monospace (Courier ou Consolas) para look de terminal
         self.font = pygame.font.SysFont("consolas", 20) 
         self.header_font = pygame.font.SysFont("consolas", 30, bold=True)
-        
-        # Definição dos Upgrades Possíveis
-        # Cada upgrade tem: Texto Display, Chave do atributo, Valor a somar/multiplicar
-        self.upgrade_pool = [
-            {'name': 'sudo apt-get install speed', 'desc': 'Aumenta velocidade de movimento (+10%)', 'type': 'speed', 'value': 1.1},
-            {'name': 'chmod +x packet_fire', 'desc': 'Reduz delay de disparo (-15%)', 'type': 'cooldown', 'value': 0.85},
-            {'name': 'kernel_patch_v2.4', 'desc': 'Aumenta integridade máxima (+20)', 'type': 'health', 'value': 20},
-            {'name': 'insmod damage_module', 'desc': 'Aumenta dano do pacote (+5)', 'type': 'damage', 'value': 5},
-        ]
-        
-        self.options = [] # Opções sorteadas para o menu atual
-        self.rects = []   # Áreas clicáveis
+
+        self.options = [] 
+        self.rects = []
 
     def generate_options(self):
-        """Sorteia 3 opções aleatórias do pool"""
-        self.options = random.sample(self.upgrade_pool, 3)
-        self.rects = [] # Limpa os retângulos antigos
+        
+        # Lógica auxiliar para legibilidade do código
+        p = self.player 
+        scan_flag = "-sU" if p.projectile_type == "udp_packet" else "-sT"
+        proto_name = "UDP" if p.projectile_type == "udp_packet" else "TCP"
+        
+        pool = [
+            {
+                'name': f'apt-get install speed_upgrade_v{p.level}', 
+                'desc': 'Aumenta velocidade de movimento (+10%)', 
+                'type': 'speed', 
+                'value': 1.1
+            },
+            {
+                'name': f'nmap -T{min(p.level, 5)} --min-rtt-timeout', # O template do nmap vai até 5 geralmente
+                'desc': 'Reduz delay de disparo (-15%)', 
+                'type': 'cooldown', 
+                'value': 0.85
+            },
+            {
+                'name': f'kernel_patch_v{(p.max_integrity+20)/100:.1f}_security_fix', 
+                'desc': 'Aumenta integridade máxima (+20)', 
+                'type': 'health', 
+                'value': 20
+            },
+            {
+                'name': f'nmap {scan_flag} --max-rate {int(p.projectile_damage + 5)}', 
+                'desc': f'Aumenta payload de pacotes {proto_name} (+5)', 
+                'type': 'damage', 
+                'value': 5
+            },
+        ]
+        
+        self.options = random.sample(pool, 3)
+        self.rects = [] 
 
     def apply_upgrade(self, upgrade):
         """Aplica a lógica matemática no Player"""
@@ -127,3 +149,9 @@ class UpgradeConsole:
                     pygame.time.wait(200) 
                     return True
         return False
+    
+class DialogBox:
+    def __init__(self):
+        self.display_surface = pygame.display.get_surface()
+        self.font = pygame.font.SysFont("consolas", 20)
+        self.name_font = pygame.font.SysFont("consolas", 30, bold=True)

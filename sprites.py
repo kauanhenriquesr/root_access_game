@@ -39,6 +39,7 @@ class Player(pygame.sprite.Sprite):
         self.integrity = self.max_integrity
 
         # Arma
+        self.projectile_type = 'udp_packet'
         self.projectile_damage = PROJECTILE_DAMAGE
         self.projectile_cooldown = WEAPON_COOLDOWN
         self.projectile_speed = PROJECTILE_SPEED

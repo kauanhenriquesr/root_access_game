@@ -132,6 +132,7 @@ class Game:
                     if self.player.xp >= self.player.xp_to_next_level:
                         self.player.level += 1
                         self.player.xp -= self.player.xp_to_next_level
+                        self.player.integrity = self.player.max_integrity
                         self.player.xp_to_next_level = int(self.player.xp_to_next_level * 1.5)
                         print(f"SYSTEM UPGRADE! Nível {self.player.level} alcançado.")
                         
