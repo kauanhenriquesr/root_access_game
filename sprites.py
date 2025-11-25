@@ -1,6 +1,54 @@
 import pygame
 import math
+import os
+import random
 from settings import *
+
+# Simples: só carregamos a imagem principal da horda `anonymus.png`.
+# Procuramos em `assets/enemies/anonymus.png` primeiro, depois no root.
+ANONYMUS_NAME = 'anonymus.png'
+ENEMY_IMAGES = []
+ENEMY_IMAGE_SOURCES = []
+_fallback_color = (200, 50, 50)
+
+
+def load_enemy_images():
+    """Carrega as imagens dos inimigos após o Pygame estar inicializado.
+    Usa `convert_alpha()` por isso deve ser chamado depois de `pygame.init()` e
+    depois de criar o display em caso de backends que exigem vídeo.
+    """
+    # Limpa listas anteriores
+    ENEMY_IMAGES.clear()
+    ENEMY_IMAGE_SOURCES.clear()
+
+    # Prioridade: assets/enemies/anonymus.png
+    candidate_paths = [os.path.join(os.getcwd(), 'assets', 'enemies', ANONYMUS_NAME),
+                       os.path.join(os.getcwd(), ANONYMUS_NAME)]
+
+    loaded = None
+    for path in candidate_paths:
+        if os.path.isfile(path):
+            try:
+                img = pygame.image.load(path).convert_alpha()
+                img = pygame.transform.scale(img, (ENEMY_SIZE, ENEMY_SIZE))
+                ENEMY_IMAGES.append(img)
+                ENEMY_IMAGE_SOURCES.append(os.path.basename(path))
+                loaded = True
+                break
+            except Exception:
+                loaded = False
+
+    if not ENEMY_IMAGES:
+        # fallback simples
+        surf = pygame.Surface((ENEMY_SIZE, ENEMY_SIZE), pygame.SRCALPHA)
+        surf.fill(_fallback_color)
+        ENEMY_IMAGES.append(surf)
+        ENEMY_IMAGE_SOURCES.append(f"fallback_color_{_fallback_color}")
+
+
+def list_enemy_images():
+    """Retorna uma cópia da lista das fontes das imagens carregadas."""
+    return ENEMY_IMAGE_SOURCES.copy()
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, pos, groups, enemy_sprites, create_projectile_func):
@@ -174,13 +222,19 @@ class Player(pygame.sprite.Sprite):
 class Malware(pygame.sprite.Sprite):
     def __init__(self, pos, player, groups):
         super().__init__(groups)
-        
-        # Visual (Placeholder: Quadrado Vermelho com "Glitch")
-        self.image = pygame.Surface((ENEMY_SIZE, ENEMY_SIZE))
-        self.image.fill(COLOR_ENEMY)
-        
+        # Usa sempre a imagem principal (anonymus) se carregada
+        if ENEMY_IMAGES:
+            self.base_image = ENEMY_IMAGES[0]
+        else:
+            # fallback seguro caso as imagens não tenham sido carregadas
+            surf = pygame.Surface((ENEMY_SIZE, ENEMY_SIZE), pygame.SRCALPHA)
+            surf.fill((200, 50, 50))
+            self.base_image = surf
+
+        self.image = self.base_image.copy()
         self.rect = self.image.get_rect(center=pos)
-        
+
+        # Health padrão (poderíamos variar por tipo no futuro)
         self.health = ENEMY_HEALTH
 
         # Mecânica de Perseguição
@@ -217,13 +271,18 @@ class Malware(pygame.sprite.Sprite):
     def visuals(self):
         if self.is_flashing:
             current_time = pygame.time.get_ticks()
-            # Acusador de dano
-            self.image.fill((255, 255, 255))
+            # Cria um overlay branco sobre a imagem base para efeito de dano
+            flash = self.base_image.copy()
+            white = pygame.Surface(flash.get_size(), pygame.SRCALPHA)
+            white.fill((255, 255, 255, 180))
+            flash.blit(white, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
+            self.image = flash
 
             # Duração do efeito
             if current_time - self.hit_time > 100:
                 self.is_flashing = False
-                self.image.fill(COLOR_ENEMY)
+                # Restaura a imagem base
+                self.image = self.base_image.copy()
     
     def update(self):
         self.hunt_player()
