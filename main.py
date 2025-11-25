@@ -1,7 +1,7 @@
 import pygame, sys, random, math
 from settings import *
 from sprites import Player, Malware, Projectile, DataDrop
-from ui import UpgradeConsole, DialogueSystem
+from ui import UpgradeConsole, DialogueSystem, GameOverScreen
 
 class Game:
     def __init__(self):
@@ -24,8 +24,12 @@ class Game:
         # UI Elements
         self.dialogue_system = DialogueSystem(self.screen)
         self.upgrade_console = UpgradeConsole(self.player, self.dialogue_system)
+        self.game_over_screen = GameOverScreen()
+        
+        # Estados do Jogo
         self.game_paused = False
         self.pause_menu = False
+        self.game_over = False
 
         # Historia inicial
         self.show_story = True
@@ -90,6 +94,11 @@ class Game:
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
+
+                if self.game_over:
+                    if event.type == pygame.KEYDOWN:
+                        if event.key == pygame.K_SPACE:
+                            self.reset_game()
                 
                 # Quando o timer disparar, crie um inimigo
                 if event.type == self.enemy_spawn_event and not self.game_paused:
@@ -102,7 +111,14 @@ class Game:
             
             self.screen.fill(COLOR_BG)
 
-            if self.game_paused:
+
+            if self.game_over:
+                # Desenha o jogo congelado ao fundo (opcional)
+                self.visible_sprites.custom_draw(self.player)
+                # Desenha a tela de Game Over por cima
+                self.game_over_screen.display()
+        
+            elif self.game_paused:
 
                  # == Menu de Upgrades ==
                 self.visible_sprites.custom_draw(self.player)
@@ -113,6 +129,11 @@ class Game:
             else: 
                 self.active_sprites.update()
                 # ROTINA NORMAL DE JOGO
+
+                # Checagem de morte do player
+                if self.player.integrity <= 0:
+                    self.game_over = True
+                    print("SISTEMA COMPROMETIDO. REINICIANDO...")
 
                 # --- COLISÕES ---
                 
@@ -166,6 +187,23 @@ class Game:
 
             pygame.display.update()
             self.clock.tick(FPS)
+
+    # main.py (Dentro da classe Game)
+
+    def reset_game(self):
+        # 1. Limpa todos os grupos de sprites
+        self.visible_sprites.empty()
+        self.active_sprites.empty()
+        self.enemy_sprites.empty()
+        self.projectile_sprites.empty()
+        self.data_sprites.empty()
+        
+        # 2. Recria o setup inicial (Recria o player do zero)
+        self.setup_system()
+        self.game_over = False
+        self.start_time = pygame.time.get_ticks() # Reinicia timer da história
+        
+        print("SISTEMA REINICIALIZADO.")
 
     def draw_ui(self):
         # --- Barra de Vida --- (Integridade do Sistema)

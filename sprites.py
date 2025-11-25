@@ -95,13 +95,6 @@ class Player(pygame.sprite.Sprite):
                     self.image.set_alpha(100) # Transparente
                 else:
                     self.image.set_alpha(255) # Opaco
-
-    def check_death(self):
-        if self.integrity <= 0:
-            # Por enquanto, apenas fecha o jogo, depois faremos uma tela de Game Over
-            print("FATAL ERROR: SYSTEM CRASHED")
-            pygame.quit()
-            exit()
         
     def get_nearest_enemy(self):
         # Cria uma lista de inimigos e suas distâncias
@@ -158,7 +151,6 @@ class Player(pygame.sprite.Sprite):
         self.cooldowns()      # Invencibilidade
         self.weapon_cooldowns() # Recarga da arma
         self.auto_shoot()     # Tenta atirar
-        self.check_death()
 
 class Malware(pygame.sprite.Sprite):
     def __init__(self, pos, player, groups):

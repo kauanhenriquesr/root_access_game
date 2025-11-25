@@ -24,7 +24,7 @@ class UpgradeConsole:
         
         pool = [
             {
-                'name': f'apt-get install speed_upgrade_v{p.level}', 
+                'name': f'apt-get upgrade speed_v{p.level}', 
                 'desc': 'Aumenta velocidade de movimento (+10%)', 
                 'type': 'speed',
                 'value': 1.1,
@@ -246,3 +246,53 @@ class DialogueSystem:
         # Corpo do Texto
         body_rect = pygame.Rect(text_x, text_y + 30, text_w, box_rect.height - 30)
         self.draw_text_wrapped(text, body_rect, (220, 220, 220))
+
+# ui.py (Adicione ao final)
+
+class GameOverScreen:
+    def __init__(self):
+        self.display_surface = pygame.display.get_surface()
+        self.title_font = pygame.font.SysFont("consolas", 60, bold=True)
+        self.text_font = pygame.font.SysFont("consolas", 24)
+        self.sub_font = pygame.font.SysFont("consolas", 18)
+
+    def display(self):
+        # 1. Fundo Semi-transparente Vermelho (Sangue Digital)
+        overlay = pygame.Surface((WIDTH, HEIGHT))
+        overlay.fill((20, 0, 0)) # Fundo quase preto, levemente vermelho
+        overlay.set_alpha(230)   # Transparência
+        self.display_surface.blit(overlay, (0, 0))
+
+        # 2. Borda de Erro Crítico
+        pygame.draw.rect(self.display_surface, (255, 0, 0), (50, 50, WIDTH-100, HEIGHT-100), 4)
+        
+        # 3. Textos
+        center_x = WIDTH // 2
+        
+        # Título: SYSTEM FAILURE
+        title_surf = self.title_font.render("SYSTEM FAILURE", True, (255, 0, 0))
+        title_rect = title_surf.get_rect(center=(center_x, 150))
+        self.display_surface.blit(title_surf, title_rect)
+        
+        # Mensagem Principal (A pedida)
+        msg_lines = [
+            "FATAL ERROR: Integridade do Servidor Comprometida.",
+            "--------------------------------------------------",
+            "RELATÓRIO DE INCIDENTE:",
+            "Os dados cruciais da empresa foram vazados.",
+            "Protocolo de RH ativado: VOCÊ FOI DEMITIDO.",
+        ]
+        
+        for i, line in enumerate(msg_lines):
+            color = (255, 255, 255) if i != 4 else (255, 50, 50) # A linha "Demits" em vermelho
+            text_surf = self.text_font.render(line, True, color)
+            text_rect = text_surf.get_rect(center=(center_x, 280 + (i * 40)))
+            self.display_surface.blit(text_surf, text_rect)
+
+        # 4. Botão de "Tentar Novamente" (Piscando)
+        current_time = pygame.time.get_ticks()
+        if (current_time // 500) % 2 == 0: # Pisca a cada meio segundo
+            prompt_text = "Pressione [ESPAÇO] para Reinicializar o Sistema"
+            prompt_surf = self.text_font.render(prompt_text, True, (0, 255, 0)) # Verde Esperança
+            prompt_rect = prompt_surf.get_rect(center=(center_x, HEIGHT - 150))
+            self.display_surface.blit(prompt_surf, prompt_rect)
