@@ -2,12 +2,16 @@ import pygame, sys, random, math
 from settings import *
 from sprites import Player, Malware, Projectile, DataDrop
 from ui import UpgradeConsole
+import sprites
 
 class Game:
     def __init__(self):
         # Inicialização básica do Pygame
         pygame.init()
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
+        # Agora que o display foi criado, carregamos as imagens dos inimigos
+        # que usam convert_alpha().
+        sprites.load_enemy_images()
         pygame.display.set_caption(TITLE)
         self.clock = pygame.time.Clock()
 
