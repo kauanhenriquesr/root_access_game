@@ -33,7 +33,7 @@ class Game:
 
         # Historia inicial
         self.show_story = True
-        self.story_text = "Olá estagiário! Sei que é seu primeiro dia, mas estamos sofrendo invasão de malwares. Use suas habilidades para eliminar as ameaças e fortalecer nossa segurança. A empresa INTEIRA DEPENDE de você!"
+        self.story_text = "Olá estagiário! Sei que é seu primeiro dia, mas justo hoje estamos sofrendo invasão no servidor principal. Use suas habilidades para eliminar as ameaças e fortalecer nossa segurança. A empresa INTEIRA DEPENDE de você!"
         self.start_time = pygame.time.get_ticks()
         
         # Quantificador de inimigos derrotados
