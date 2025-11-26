@@ -207,6 +207,7 @@ class Game:
         self.game_over = False
         self.start_time = pygame.time.get_ticks() # Reinicia timer da história
         
+        self.upgrade_console = UpgradeConsole(self.player, self.dialogue_system)
         print("SISTEMA REINICIALIZADO.")
 
     def draw_ui(self):
