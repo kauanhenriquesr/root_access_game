@@ -108,7 +108,7 @@ class Game:
                             self.reset_game()
                 
                 # Quando o timer disparar, crie um inimigo
-                if event.type == self.enemy_spawn_event and not self.game_paused:
+                if event.type == self.enemy_spawn_event and not self.game_paused and not self.show_story:
                     self.spawn_enemy()
                 
                 if event.type == pygame.KEYDOWN:
@@ -190,13 +190,14 @@ class Game:
                          self.story_text2, 
                          "TUX AI [SISTEMA INICIALIZADO]:"
                      )
+                     self.show_story = False
                 
-                 # Mensagem ao matar 10 inimigos        
+                 # Mensagem ao matar 20 inimigos        
                 
-                if self.enemies_killed == 50:
+                if self.enemies_killed == 20:
                     self.first_enemies_killed = pygame.time.get_ticks()
                 
-                if pygame.time.get_ticks() - self.first_enemies_killed  < 10000 and self.enemies_killed > 50:
+                if pygame.time.get_ticks() - self.first_enemies_killed  < 10000 and self.enemies_killed > 20:
                     self.dialogue_system.execute(
                         "Excelente trabalho! Com essas ameaças encontradas, nosso sistema está mais seguro. Continue assim e não hesite em usar o console de upgrades para fortalecer ainda mais nossas defesas.",
                         "TUX AI [SISTEMA ESTÁVEL]:"
