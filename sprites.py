@@ -293,10 +293,16 @@ class Malware(pygame.sprite.Sprite):
 class Projectile(pygame.sprite.Sprite):
     def __init__(self, pos, direction, groups):
         super().__init__(groups)
-        
-        # Visual: Um pequeno "bit" quadrado
-        self.image = pygame.Surface((10, 10))
-        self.image.fill(COLOR_PROJECTILE)
+
+        try: 
+            self.image = pygame.image.load(f"{PATH_SPRITES}PACKET.png").convert_alpha()
+            self.image = pygame.transform.scale(self.image, (PROJECTILE_SIZE, PROJECTILE_SIZE))
+            self.image.set_colorkey((0, 0, 0))
+        except Exception as e:
+            print(f"Erro ao carregar imagem do projétil: {e}")
+            self.image = pygame.Surface((PROJECTILE_SIZE, PROJECTILE_SIZE))
+            self.image.fill(COLOR_PROJECTILE)
+
         self.rect = self.image.get_rect(center=pos)
         
         # Física

@@ -28,6 +28,7 @@ ENEMY_HEALTH = 50     # Vida do inimigo
 SPAWN_RATE = 500      # Milissegundos entre cada spawn (quanto menor, mais difícil)
 
 #Stats do Tiro
+PROJECTILE_SIZE = 10
 PROJECTILE_SPEED = 10
 PROJECTILE_LIFETIME = 1000 # Milissegundos que o tiro dura antes de sumir
 PROJECTILE_DAMAGE = 25
@@ -39,3 +40,6 @@ COLOR_XP = (0, 255, 255) # Ciano Brilhante
 XP_SIZE = 8
 MAGNET_RADIUS = 150      # Distância em pixels para o item começar a voar até o player
 DATA_VALUE = 10          # Quanto XP cada item dá
+
+# Paths
+PATH_SPRITES = "assets/graphics/"

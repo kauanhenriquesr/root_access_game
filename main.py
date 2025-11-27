@@ -37,14 +37,17 @@ class Game:
 
         # Historia inicial
         self.show_story = True
-        self.story_text = "Olá estagiário! Sei que é seu primeiro dia, mas justo hoje estamos sofrendo invasão no servidor principal. Use suas habilidades para eliminar as ameaças e fortalecer nossa segurança. A empresa INTEIRA DEPENDE de você!"
+        self.story_text1 = "Olá estagiário! Sei que é seu primeiro dia, mas justo hoje estamos sofrendo invasão no servidor principal. Use suas habilidades para eliminar as ameaças e fortalecer nossa segurança. A empresa INTEIRA DEPENDE de você!"
+        self.story_text2 = "Use as setas ou WASD para se mover. Você deve enviar pacotes aos invasores e identificá-los. Após sua identificação, o sistema bloqueia seu endereço por firewall. Colete os dados para subir de nível e aplicar patches no sistema."
         self.start_time = pygame.time.get_ticks()
+        self.first_enemies_killed = 0 
         
         # Quantificador de inimigos derrotados
         self.enemies_killed = 0
 
+        self.spawnrate = SPAWN_RATE
         self.enemy_spawn_event = pygame.USEREVENT + 1
-        pygame.time.set_timer(self.enemy_spawn_event, SPAWN_RATE)
+        pygame.time.set_timer(self.enemy_spawn_event, self.spawnrate)
 
     def setup_system(self):
         # Note que agora passamos self.enemy_sprites e self.create_projectile
@@ -157,7 +160,7 @@ class Game:
                             if enemy.health <= 0:
                                 # XP ao matar o inimigo
                                 DataDrop(enemy.rect.center, self.player, [self.visible_sprites, self.active_sprites, self.data_sprites])
-
+                                self.enemies_killed += 1
                 # 3. Player coleta Data (XP)
                 collected_data = pygame.sprite.spritecollide(self.player, self.data_sprites, True)
                 for data in collected_data:
@@ -179,14 +182,24 @@ class Game:
 
                 if pygame.time.get_ticks() - self.start_time < 10000:
                      self.dialogue_system.execute(
-                         self.story_text, 
+                         self.story_text1, 
                          "TUX AI [ALERTA DE INTRUSÃO]:"
                      )
+                if pygame.time.get_ticks() - self.start_time < 30000 and pygame.time.get_ticks() - self.start_time > 10000:
+                     self.dialogue_system.execute(
+                         self.story_text2, 
+                         "TUX AI [SISTEMA INICIALIZADO]:"
+                     )
                 
-                if self.enemies_killed >= 50:
+                 # Mensagem ao matar 10 inimigos        
+                
+                if self.enemies_killed == 50:
+                    self.first_enemies_killed = pygame.time.get_ticks()
+                
+                if pygame.time.get_ticks() - self.first_enemies_killed  < 10000 and self.enemies_killed > 50:
                     self.dialogue_system.execute(
-                        "Parabéns! Você eliminou 50 malwares e fortaleceu a segurança do servidor. Continue assim!",
-                        "TUX AI [MENSAGEM DE SISTEMA]:"
+                        "Excelente trabalho! Com essas ameaças encontradas, nosso sistema está mais seguro. Continue assim e não hesite em usar o console de upgrades para fortalecer ainda mais nossas defesas.",
+                        "TUX AI [SISTEMA ESTÁVEL]:"
                     )
 
             pygame.display.update()
