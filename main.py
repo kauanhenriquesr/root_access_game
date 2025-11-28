@@ -220,7 +220,8 @@ class Game:
         self.setup_system()
         self.game_over = False
         self.start_time = pygame.time.get_ticks() # Reinicia timer da história
-        
+        self.show_story = True
+        self.enemies_killed = 0
         self.upgrade_console = UpgradeConsole(self.player, self.dialogue_system)
         print("SISTEMA REINICIALIZADO.")
 
