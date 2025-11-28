@@ -22,7 +22,7 @@ PLAYER_INVINCIBILITY = 700  # Tempo em ms que ele fica imune após hit
 
 # Stats Iniciais Inimigos
 ENEMY_SPEED = 3
-ENEMY_SIZE = 32       # Um pouco menor que o player
+ENEMY_SIZE = 62       # Um pouco menor que o player
 ENEMY_DAMAGE = 10     # Dano causado ao player por colisão
 ENEMY_HEALTH = 50     # Vida do inimigo
 SPAWN_RATE = 500      # Milissegundos entre cada spawn (quanto menor, mais difícil)

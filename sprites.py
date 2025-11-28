@@ -1,3 +1,4 @@
+import os
 import pygame
 import math
 from settings import *
@@ -164,32 +165,59 @@ class Malware(pygame.sprite.Sprite):
     def __init__(self, pos, player, groups):
         super().__init__(groups)
         
-        # Visual (Placeholder: Quadrado Vermelho com "Glitch")
-        self.image = pygame.Surface((ENEMY_SIZE, ENEMY_SIZE))
-        self.image.fill(COLOR_ENEMY)
-        
+        # Carregar spritesheet do inimigo
+        self.load_images()
+        self.image = self.walk_frames[0]
         self.rect = self.image.get_rect(center=pos)
-        
+
         self.health = ENEMY_HEALTH
 
-        # Mecânica de Perseguição
-        self.player = player # Referência ao alvo (o servidor)
+        # Mecânica de perseguição
+        self.player = player
         self.speed = ENEMY_SPEED
         self.direction = pygame.math.Vector2()
 
-        # Dano ticar
-        self.hit_time = 0
-        self.is_flashing = False
+        # Animação
+        self.animation_index = 0
+        self.animation_speed = 0.15  # quanto maior, mais rápido alterna
+        self.state = "walk"          # "walk" ou "hurt"
+        self.hurt_time = 0
+        self.hurt_duration = 120     # ms que fica no frame de dano
+
+    def load_images(self):
+        # Spritesheet: 2 colunas x 2 linhas
+        # Pega a pasta onde o sprites.py está
+        base_dir = os.path.dirname(__file__)
+        # Monta o caminho completo até a imagem
+        img_path = os.path.join(base_dir, "assets", "Inimigo.png")
+        sheet = pygame.image.load(img_path).convert_alpha()
+        sheet_width, sheet_height = sheet.get_size()
+        
+
+        frame_width = sheet_width // 2
+        frame_height = sheet_height // 2
+
+        def get_frame(col, row):
+            frame = pygame.Surface((frame_width, frame_height), pygame.SRCALPHA)
+            frame.blit(
+                sheet,
+                (0, 0),
+                pygame.Rect(col * frame_width, row * frame_height, frame_width, frame_height),
+            )
+            # Escala para o tamanho do inimigo definido em settings.py
+            frame = pygame.transform.scale(frame, (ENEMY_SIZE, ENEMY_SIZE))
+            return frame
+
+        # 0,0 e 1,0 → caminhada
+        self.walk_frames = [get_frame(0, 0), get_frame(1, 0)]
+        # 0,1 → dano
+        self.hurt_frame = get_frame(0, 1)
 
     def hunt_player(self):
-        # Vetor do Inimigo até o Player
         player_vector = pygame.math.Vector2(self.player.rect.center)
         enemy_vector = pygame.math.Vector2(self.rect.center)
-        
-        # Subtrair vetores dá a direção (Distância)
         distance = player_vector - enemy_vector
 
-        # Normalizar: Transforma a distância em direção pura (valor entre -1 e 1)
         if distance.magnitude() > 0:
             self.direction = distance.normalize()
         else:
@@ -197,28 +225,33 @@ class Malware(pygame.sprite.Sprite):
 
     def take_damage(self, amount):
         self.health -= amount
-        self.is_flashing = True
-        self.hit_time = pygame.time.get_ticks()
+        self.state = "hurt"
+        self.hurt_time = pygame.time.get_ticks()
 
         if self.health <= 0:
             self.kill()
-    
-    def visuals(self):
-        if self.is_flashing:
-            current_time = pygame.time.get_ticks()
-            # Acusador de dano
-            self.image.fill((255, 255, 255))
 
-            # Duração do efeito
-            if current_time - self.hit_time > 100:
-                self.is_flashing = False
-                self.image.fill(COLOR_ENEMY)
-    
+    def animate(self):
+        if self.state == "walk":
+            self.animation_index += self.animation_speed
+            if self.animation_index >= len(self.walk_frames):
+                self.animation_index = 0
+            self.image = self.walk_frames[int(self.animation_index)]
+        elif self.state == "hurt":
+            self.image = self.hurt_frame
+
+    def update_state(self):
+        # Sai do estado de dano depois de hurt_duration ms
+        if self.state == "hurt":
+            current_time = pygame.time.get_ticks()
+            if current_time - self.hurt_time >= self.hurt_duration:
+                self.state = "walk"
+
     def update(self):
         self.hunt_player()
-        # Move o inimigo na direção calculada
         self.rect.center += self.direction * self.speed
-        self.visuals()
+        self.update_state()
+        self.animate()
 
 class Projectile(pygame.sprite.Sprite):
     def __init__(self, pos, direction, groups):
