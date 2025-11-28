@@ -192,7 +192,7 @@ class Malware(pygame.sprite.Sprite):
         img_path = os.path.join(base_dir, "assets", "Inimigo.png")
         sheet = pygame.image.load(img_path).convert_alpha()
         sheet_width, sheet_height = sheet.get_size()
-        
+
 
         frame_width = sheet_width // 2
         frame_height = sheet_height // 2
@@ -254,28 +254,51 @@ class Malware(pygame.sprite.Sprite):
         self.animate()
 
 class Projectile(pygame.sprite.Sprite):
-    def __init__(self, pos, direction, groups):
+    # cache da imagem pra não recarregar do disco toda hora
+    _base_image = None
+
+    @classmethod
+    def _get_base_image(cls):
+        if cls._base_image is None:
+            base_dir = os.path.dirname(__file__)
+            img_path = os.path.join(base_dir, "assets", "Projetil.png")
+
+            image = pygame.image.load(img_path).convert_alpha()
+            image = pygame.transform.scale(image, (PROJECTILE_SIZE, PROJECTILE_SIZE))
+
+            cls._base_image = image
+        return cls._base_image
+
+    def __init__(self, pos, direction, groups, speed=PROJECTILE_SPEED, damage=PROJECTILE_DAMAGE):
         super().__init__(groups)
-        
-        # Visual: Um pequeno "bit" quadrado
-        self.image = pygame.Surface((10, 10))
-        self.image.fill(COLOR_PROJECTILE)
+
+        # direção
+        self.direction = pygame.math.Vector2(direction)
+        if self.direction.length_squared() != 0:
+            self.direction = self.direction.normalize()
+        else:
+            self.direction = pygame.math.Vector2(1, 0)
+
+        self.speed = speed
+        self.damage = damage
+
+        # imagem base
+        base_image = self._get_base_image()
+
+        # calcula o ângulo a partir da direção
+        # OBS: aqui estou assumindo que a sprite aponta "pra cima" originalmente.
+        # Se ela apontar para a direita, é só tirar o -90.
+        angle = math.degrees(math.atan2(-self.direction.y, self.direction.x)) - 90
+
+        # rotaciona mantendo o centro
+        self.image = pygame.transform.rotate(base_image, angle)
         self.rect = self.image.get_rect(center=pos)
-        
-        # Física
-        self.direction = direction
-        self.speed = PROJECTILE_SPEED
-        
-        # Tempo de vida (para não lagar o jogo com tiros infinitos voando)
-        self.spawn_time = pygame.time.get_ticks()
 
     def update(self):
-        # Move o projétil
+        # move o tiro
         self.rect.center += self.direction * self.speed
-        
-        # Checa se o tempo de vida acabou
-        if pygame.time.get_ticks() - self.spawn_time > PROJECTILE_LIFETIME:
-            self.kill() # Remove o sprite de todos os grupos e libera memória
+        # depois podemos colocar limite de tela / lifetime se quiser
+
 
 class DataDrop(pygame.sprite.Sprite):
     def __init__(self, pos, player, groups):
