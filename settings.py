@@ -36,7 +36,7 @@ COLOR_PROJECTILE = (255, 255, 0) # Amarelo
 PROJECTILE_SIZE = 78
 
 # Configurações de XP (Data)
-COLOR_XP = (0, 255, 255) # Ciano Brilhante
+COLOR_XP = (170, 255, 0) # Verde brilhante
 XP_SIZE = 8
 MAGNET_RADIUS = 150      # Distância em pixels para o item começar a voar até o player
 DATA_VALUE = 10          # Quanto XP cada item dá
