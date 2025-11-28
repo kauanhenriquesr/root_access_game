@@ -22,7 +22,7 @@ PLAYER_INVINCIBILITY = 700  # Tempo em ms que ele fica imune após hit
 
 # Stats Iniciais Inimigos
 ENEMY_SPEED = 3
-ENEMY_SIZE = 32       # Um pouco menor que o player
+ENEMY_SIZE = 62       # Um pouco menor que o player
 ENEMY_DAMAGE = 10     # Dano causado ao player por colisão
 ENEMY_HEALTH = 50     # Vida do inimigo
 SPAWN_RATE = 500      # Milissegundos entre cada spawn (quanto menor, mais difícil)
@@ -33,10 +33,11 @@ PROJECTILE_SPEED = 10
 PROJECTILE_LIFETIME = 1000 # Milissegundos que o tiro dura antes de sumir
 PROJECTILE_DAMAGE = 25
 WEAPON_COOLDOWN = 600      # Cadência de tiro (ms) - Quanto menor, mais rápido
-COLOR_PROJECTILE = (255, 255, 0) # Amarelo (Dados trafegando)
+COLOR_PROJECTILE = (255, 255, 0) # Amarelo 
+PROJECTILE_SIZE = 78
 
 # Configurações de XP (Data)
-COLOR_XP = (0, 255, 255) # Ciano Brilhante
+COLOR_XP = (170, 255, 0) # Verde brilhante
 XP_SIZE = 8
 MAGNET_RADIUS = 150      # Distância em pixels para o item começar a voar até o player
 DATA_VALUE = 10          # Quanto XP cada item dá

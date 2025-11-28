@@ -1,3 +1,4 @@
+import os
 import pygame
 import math
 import os
@@ -222,39 +223,60 @@ class Player(pygame.sprite.Sprite):
 class Malware(pygame.sprite.Sprite):
     def __init__(self, pos, player, groups):
         super().__init__(groups)
-        # Usa sempre a imagem principal (anonymus) se carregada
-        if ENEMY_IMAGES:
-            self.base_image = ENEMY_IMAGES[0]
-        else:
-            # fallback seguro caso as imagens não tenham sido carregadas
-            surf = pygame.Surface((ENEMY_SIZE, ENEMY_SIZE), pygame.SRCALPHA)
-            surf.fill((200, 50, 50))
-            self.base_image = surf
-
-        self.image = self.base_image.copy()
+        
+        # Carregar spritesheet do inimigo
+        self.load_images()
+        self.image = self.walk_frames[0]
         self.rect = self.image.get_rect(center=pos)
 
-        # Health padrão (poderíamos variar por tipo no futuro)
         self.health = ENEMY_HEALTH
 
-        # Mecânica de Perseguição
-        self.player = player # Referência ao alvo (o servidor)
+        # Mecânica de perseguição
+        self.player = player
         self.speed = ENEMY_SPEED
         self.direction = pygame.math.Vector2()
 
-        # Dano ticar
-        self.hit_time = 0
-        self.is_flashing = False
+        # Animação
+        self.animation_index = 0
+        self.animation_speed = 0.15  # quanto maior, mais rápido alterna
+        self.state = "walk"          # "walk" ou "hurt"
+        self.hurt_time = 0
+        self.hurt_duration = 120     # ms que fica no frame de dano
+
+    def load_images(self):
+        # Spritesheet: 2 colunas x 2 linhas
+        # Pega a pasta onde o sprites.py está
+        base_dir = os.path.dirname(__file__)
+        # Monta o caminho completo até a imagem
+        img_path = os.path.join(base_dir, "assets", "Inimigo.png")
+        sheet = pygame.image.load(img_path).convert_alpha()
+        sheet_width, sheet_height = sheet.get_size()
+
+
+        frame_width = sheet_width // 2
+        frame_height = sheet_height // 2
+
+        def get_frame(col, row):
+            frame = pygame.Surface((frame_width, frame_height), pygame.SRCALPHA)
+            frame.blit(
+                sheet,
+                (0, 0),
+                pygame.Rect(col * frame_width, row * frame_height, frame_width, frame_height),
+            )
+            # Escala para o tamanho do inimigo definido em settings.py
+            frame = pygame.transform.scale(frame, (ENEMY_SIZE, ENEMY_SIZE))
+            return frame
+
+        # 0,0 e 1,0 → caminhada
+        self.walk_frames = [get_frame(0, 0), get_frame(1, 0)]
+        # 0,1 → dano
+        self.hurt_frame = get_frame(0, 1)
 
     def hunt_player(self):
-        # Vetor do Inimigo até o Player
         player_vector = pygame.math.Vector2(self.player.rect.center)
         enemy_vector = pygame.math.Vector2(self.rect.center)
-        
-        # Subtrair vetores dá a direção (Distância)
         distance = player_vector - enemy_vector
 
-        # Normalizar: Transforma a distância em direção pura (valor entre -1 e 1)
         if distance.magnitude() > 0:
             self.direction = distance.normalize()
         else:
@@ -262,63 +284,80 @@ class Malware(pygame.sprite.Sprite):
 
     def take_damage(self, amount):
         self.health -= amount
-        self.is_flashing = True
-        self.hit_time = pygame.time.get_ticks()
+        self.state = "hurt"
+        self.hurt_time = pygame.time.get_ticks()
 
         if self.health <= 0:
             self.kill()
-    
-    def visuals(self):
-        if self.is_flashing:
-            current_time = pygame.time.get_ticks()
-            # Cria um overlay branco sobre a imagem base para efeito de dano
-            flash = self.base_image.copy()
-            white = pygame.Surface(flash.get_size(), pygame.SRCALPHA)
-            white.fill((255, 255, 255, 180))
-            flash.blit(white, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
-            self.image = flash
 
-            # Duração do efeito
-            if current_time - self.hit_time > 100:
-                self.is_flashing = False
-                # Restaura a imagem base
-                self.image = self.base_image.copy()
-    
+    def animate(self):
+        if self.state == "walk":
+            self.animation_index += self.animation_speed
+            if self.animation_index >= len(self.walk_frames):
+                self.animation_index = 0
+            self.image = self.walk_frames[int(self.animation_index)]
+        elif self.state == "hurt":
+            self.image = self.hurt_frame
+
+    def update_state(self):
+        # Sai do estado de dano depois de hurt_duration ms
+        if self.state == "hurt":
+            current_time = pygame.time.get_ticks()
+            if current_time - self.hurt_time >= self.hurt_duration:
+                self.state = "walk"
+
     def update(self):
         self.hunt_player()
-        # Move o inimigo na direção calculada
         self.rect.center += self.direction * self.speed
-        self.visuals()
+        self.update_state()
+        self.animate()
 
 class Projectile(pygame.sprite.Sprite):
-    def __init__(self, pos, direction, groups):
+    # cache da imagem pra não recarregar do disco toda hora
+    _base_image = None
+
+    @classmethod
+    def _get_base_image(cls):
+        if cls._base_image is None:
+            base_dir = os.path.dirname(__file__)
+            img_path = os.path.join(base_dir, "assets", "Projetil.png")
+
+            image = pygame.image.load(img_path).convert_alpha()
+            image = pygame.transform.scale(image, (PROJECTILE_SIZE, PROJECTILE_SIZE))
+
+            cls._base_image = image
+        return cls._base_image
+
+    def __init__(self, pos, direction, groups, speed=PROJECTILE_SPEED, damage=PROJECTILE_DAMAGE):
         super().__init__(groups)
 
-        try: 
-            self.image = pygame.image.load(f"{PATH_SPRITES}PACKET.png").convert_alpha()
-            self.image = pygame.transform.scale(self.image, (PROJECTILE_SIZE, PROJECTILE_SIZE))
-            self.image.set_colorkey((0, 0, 0))
-        except Exception as e:
-            print(f"Erro ao carregar imagem do projétil: {e}")
-            self.image = pygame.Surface((PROJECTILE_SIZE, PROJECTILE_SIZE))
-            self.image.fill(COLOR_PROJECTILE)
+        # direção
+        self.direction = pygame.math.Vector2(direction)
+        if self.direction.length_squared() != 0:
+            self.direction = self.direction.normalize()
+        else:
+            self.direction = pygame.math.Vector2(1, 0)
 
+        self.speed = speed
+        self.damage = damage
+
+        # imagem base
+        base_image = self._get_base_image()
+
+        # calcula o ângulo a partir da direção
+        # OBS: aqui estou assumindo que a sprite aponta "pra cima" originalmente.
+        # Se ela apontar para a direita, é só tirar o -90.
+        angle = math.degrees(math.atan2(-self.direction.y, self.direction.x)) - 90
+
+        # rotaciona mantendo o centro
+        self.image = pygame.transform.rotate(base_image, angle)
         self.rect = self.image.get_rect(center=pos)
-        
-        # Física
-        self.direction = direction
-        self.speed = PROJECTILE_SPEED
-        
-        # Tempo de vida (para não lagar o jogo com tiros infinitos voando)
-        self.spawn_time = pygame.time.get_ticks()
 
     def update(self):
-        # Move o projétil
+        # move o tiro
         self.rect.center += self.direction * self.speed
-        
-        # Checa se o tempo de vida acabou
-        if pygame.time.get_ticks() - self.spawn_time > PROJECTILE_LIFETIME:
-            self.kill() # Remove o sprite de todos os grupos e libera memória
+        # depois podemos colocar limite de tela / lifetime se quiser
+
 
 class DataDrop(pygame.sprite.Sprite):
     def __init__(self, pos, player, groups):
