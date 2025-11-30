@@ -55,156 +55,232 @@ class Player(pygame.sprite.Sprite):
     def __init__(self, pos, groups, enemy_sprites, create_projectile_func):
         super().__init__(groups)
 
+        # --------- IMAGEM DO TUX PARA A UI (base_image) ----------
+        base_dir = os.path.dirname(__file__)
         try:
-            loaded = pygame.image.load("tux.webp").convert_alpha()
-            # Armazena a imagem base e escala para o tamanho do tile
-            self.base_image = pygame.transform.scale(loaded, (TILE_SIZE, TILE_SIZE))
+            # se o teu arquivo estiver em assets/tux.webp, usa essa linha:
+            tux_path = os.path.join(base_dir, "assets", "tux.webp")
+            tux_loaded = pygame.image.load(tux_path).convert_alpha()
+            self.base_image = pygame.transform.scale(tux_loaded, (TILE_SIZE, TILE_SIZE))
         except Exception:
-            # Fallback: superfície simples colorida
+            # fallback caso não ache o arquivo
             self.base_image = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
             self.base_image.fill(COLOR_PLAYER)
 
-        # Imagem atual usada para efeitos (cópia de base_image)
-        self.image = self.base_image.copy()
-        
-        # Hitbox e Posicionamento
+        # --------- SPRITESHEET DO PROTAGONISTA (sprite que anda) ----------
+        self.load_images()  # monta self.animations e self.hurt_frame
+
+        self.status = "down_idle"
+        self.frame_index = 0
+        self.animation_speed = 0.15
+
+        # AQUI usamos o protagonista como imagem de jogo
+        self.image = self.animations[self.status][0]
         self.rect = self.image.get_rect(topleft=pos)
-        
-        # Vetor de movimento (x, y)
+
+
+        # Movimento
         self.direction = pygame.math.Vector2()
 
-        # Stats
+        # Flags de dano/invencibilidade
         self.vulnerable = True
         self.hurt_time = 0
-        self.image_alpha = 255 # Para o efeito de piscar
+        self.hurt = False          # se está usando o frame de dano
 
-        # Novas referências para o combate
-        self.enemy_sprites = enemy_sprites 
-        self.create_projectile = create_projectile_func # Função callback para criar o tiro
-        
-        # Cooldown do tiro
+        # Inimigos e tiro
+        self.enemy_sprites = enemy_sprites
+        self.create_projectile = create_projectile_func
         self.can_shoot = True
         self.shoot_time = 0
 
-        # Sistema de LEVEL
+        # Sistema de level
         self.xp = 0
         self.level = 1
         self.xp_to_next_level = 100
 
-        # --- Atributos do player ---
+        # Atributos do player
         self.speed = PLAYER_SPEED
         self.max_integrity = PLAYER_MAX_INTEGRITY
         self.integrity = self.max_integrity
 
-        # Arma
         self.projectile_type = 'udp_packet'
         self.projectile_damage = PROJECTILE_DAMAGE
         self.projectile_cooldown = WEAPON_COOLDOWN
         self.projectile_speed = PROJECTILE_SPEED
 
+    # ---------------- CARREGAR SPRITES -----------------
+
+    def load_images(self):
+        """
+        Carrega Protagonista.png (3x3) e monta o dicionário de animações.
+
+        Numeração dos frames (linha a linha):
+        1 2 3
+        4 5 6
+        7 8 9
+        """
+        base_dir = os.path.dirname(__file__)
+        img_path = os.path.join(base_dir, "assets", "Protagonista.png")
+        sheet = pygame.image.load(img_path).convert_alpha()
+
+
+        sheet_width, sheet_height = sheet.get_size()
+        frame_width = sheet_width // 3
+        frame_height = sheet_height // 3
+
+        def get_frame(col, row):
+            frame = pygame.Surface((frame_width, frame_height), pygame.SRCALPHA)
+            frame.blit(
+                sheet,
+                (0, 0),
+                pygame.Rect(col * frame_width, row * frame_height, frame_width, frame_height)
+            )
+            frame = pygame.transform.scale(frame, (TILE_SIZE*3, TILE_SIZE*3))
+            return frame
+
+        # Numeração 1–9
+        f1 = get_frame(0, 0)  # 1
+        f2 = get_frame(1, 0)  # 2
+        f3 = get_frame(2, 0)  # 3
+        f4 = get_frame(0, 1)  # 4
+        f5 = get_frame(1, 1)  # 5
+        f6 = get_frame(2, 1)  # 6
+        f7 = get_frame(0, 2)  # 7
+        f8 = get_frame(1, 2)  # 8
+        f9 = get_frame(2, 2)  # 9 (dano)
+
+        # Frame de dano
+        self.hurt_frame = f9
+
+        # Corrida pra baixo (1 e 2) + idle
+        down_frames = [f1, f2]
+        # Corrida pra cima (3 e 4)
+        up_frames = [f3, f4]
+        # Corrida pra esquerda (5–8)
+        left_frames = [f5, f6, f7, f8]
+        # Direita = flip horizontal da esquerda
+        right_frames = [
+            pygame.transform.flip(frame, True, False) for frame in left_frames
+        ]
+
+        self.animations = {
+            "down": down_frames,
+            "down_idle": [f1],
+            "up": up_frames,
+            "up_idle": [f3],
+            "left": left_frames,
+            "left_idle": [left_frames[0]],
+            "right": right_frames,
+            "right_idle": [right_frames[0]],
+        }
+
+    # ---------------- ENTRADA / MOVIMENTO -----------------
+
     def input(self):
         keys = pygame.key.get_pressed()
 
-        # Movimento WASD ou Setas
+        self.direction.x = 0
+        self.direction.y = 0
+
         if keys[pygame.K_UP] or keys[pygame.K_w]:
             self.direction.y = -1
         elif keys[pygame.K_DOWN] or keys[pygame.K_s]:
             self.direction.y = 1
-        else:
-            self.direction.y = 0
 
         if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
             self.direction.x = 1
         elif keys[pygame.K_LEFT] or keys[pygame.K_a]:
             self.direction.x = -1
+
+    def get_status(self):
+        # Direção principal
+        if self.direction.y > 0:
+            self.status = "down"
+        elif self.direction.y < 0:
+            self.status = "up"
+        elif self.direction.x < 0:
+            self.status = "left"
+        elif self.direction.x > 0:
+            self.status = "right"
         else:
-            self.direction.x = 0
+            # parado → idle na última direção
+            if "down" in self.status:
+                self.status = "down_idle"
+            elif "up" in self.status:
+                self.status = "up_idle"
+            elif "left" in self.status:
+                self.status = "left_idle"
+            elif "right" in self.status:
+                self.status = "right_idle"
+            else:
+                self.status = "down_idle"
 
     def move(self, speed):
-        # Normalizar vetor (para não andar mais rápido na diagonal)
         if self.direction.magnitude() != 0:
             self.direction = self.direction.normalize()
-        
         self.rect.center += self.direction * speed
+
+    # ---------------- DANO / INVENCIBILIDADE -----------------
 
     def take_damage(self, amount):
         if self.vulnerable:
             self.integrity -= amount
             self.vulnerable = False
+            self.hurt = True
             self.hurt_time = pygame.time.get_ticks()
             print(f"ALERTA DE SEGURANÇA: Integridade em {self.integrity}%")
-            
-            # Efeito visual de dano (overlay branco momentâneo)
-            flash = self.base_image.copy()
-            # Adiciona branco por cima para simular flash
-            white = pygame.Surface(flash.get_size(), pygame.SRCALPHA)
-            white.fill((255, 255, 255, 180))
-            flash.blit(white, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
-            self.image = flash
-    
+
     def cooldowns(self):
         current_time = pygame.time.get_ticks()
 
         if not self.vulnerable:
-            # Verifica se o tempo de invencibilidade acabou
             if current_time - self.hurt_time >= PLAYER_INVINCIBILITY:
                 self.vulnerable = True
-                # Restaura a imagem base e garante opacidade total
-                self.image = self.base_image.copy()
+                self.hurt = False
                 self.image.set_alpha(255)
             else:
-                # Efeito de piscar (Flicker) enquanto invulnerável
-                # Alterna a transparência baseado no tempo (senoide simples simulada)
+                # Pisca enquanto invulnerável
                 if (current_time // 100) % 2 == 0:
-                    temp = self.base_image.copy()
-                    temp.set_alpha(100)
-                    self.image = temp
+                    self.image.set_alpha(100)
                 else:
-                    temp = self.base_image.copy()
-                    temp.set_alpha(255)
-                    self.image = temp
-        
+                    self.image.set_alpha(255)
+
+    # ---------------- TIRO AUTOMÁTICO -----------------
+
     def get_nearest_enemy(self):
-        # Cria uma lista de inimigos e suas distâncias
         if not self.enemy_sprites:
             return None
-            
+
         nearest_enemy = None
-        min_distance = float('inf') # Começa com infinito
-        
+        min_distance = float('inf')
         player_vec = pygame.math.Vector2(self.rect.center)
-        
+
         for enemy in self.enemy_sprites:
             enemy_vec = pygame.math.Vector2(enemy.rect.center)
-            # distance_to é uma função otimizada do Pygame
             dist = player_vec.distance_to(enemy_vec)
-            
             if dist < min_distance:
                 min_distance = dist
                 nearest_enemy = enemy
-                
+
         return nearest_enemy
 
     def auto_shoot(self):
         current_time = pygame.time.get_ticks()
-        
-        # Verifica Cooldown
+
         if self.can_shoot:
             target = self.get_nearest_enemy()
-            
-            if target: # Só atira se tiver inimigo
+            if target:
                 self.can_shoot = False
                 self.shoot_time = current_time
-                
-                # Calcular direção do tiro
+
                 player_vec = pygame.math.Vector2(self.rect.center)
                 target_vec = pygame.math.Vector2(target.rect.center)
-                
-                # Vetor direção = Destino - Origem
-                try: direction = (target_vec - player_vec).normalize()
+
+                try:
+                    direction = (target_vec - player_vec).normalize()
                 except ValueError:
                     direction = pygame.math.Vector2(0, 0)
-                # Chama a função lá do main para criar o tiro
+
                 self.create_projectile(self.rect.center, direction)
 
     def weapon_cooldowns(self):
@@ -213,12 +289,32 @@ class Player(pygame.sprite.Sprite):
             if current_time - self.shoot_time >= self.projectile_cooldown:
                 self.can_shoot = True
 
+    # ---------------- ANIMAÇÃO -----------------
+
+    def animate(self):
+        # Se estiver em estado de dano, usa frame 9
+        if self.hurt:
+            self.image = self.hurt_frame
+            return
+
+        animation = self.animations[self.status]
+        self.frame_index += self.animation_speed
+        if self.frame_index >= len(animation):
+            self.frame_index = 0
+
+        self.image = animation[int(self.frame_index)]
+
+    # ---------------- UPDATE GERAL -----------------
+
     def update(self):
         self.input()
+        self.get_status()
         self.move(self.speed)
-        self.cooldowns()      # Invencibilidade
-        self.weapon_cooldowns() # Recarga da arma
-        self.auto_shoot()     # Tenta atirar
+        self.cooldowns()
+        self.weapon_cooldowns()
+        self.auto_shoot()
+        self.animate()
+
 
 class Malware(pygame.sprite.Sprite):
     def __init__(self, pos, player, groups):
