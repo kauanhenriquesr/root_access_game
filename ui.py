@@ -3,9 +3,10 @@ import random
 from settings import *
 
 class UpgradeConsole:
-    def __init__(self, player, dialogue_system):
+    def __init__(self, player, dialogue_system, sound_manager=None):
         self.player = player
         self.dialogue_system = dialogue_system
+        self.sound_manager = sound_manager
 
         self.display_surface = pygame.display.get_surface()
         
@@ -14,8 +15,15 @@ class UpgradeConsole:
 
         self.options = [] 
         self.rects = []
+        
+        # Flag para evitar múltiplos cliques
+        self.can_click = True
+        self.last_click_time = 0
 
     def generate_options(self):
+        # Toca o som de upgrade quando gera as opções
+        if self.sound_manager:
+            self.sound_manager.play_upgrade()
         
         # Lógica auxiliar para legibilidade do código
         p = self.player 
@@ -155,12 +163,30 @@ class UpgradeConsole:
 
     def update(self):
         """Retorna True se escolheu algo (para fechar o menu)"""
-        # Verifica cliques
-        if pygame.mouse.get_pressed()[0]: # Botão esquerdo
+        current_time = pygame.time.get_ticks()
+        
+        # Detecta clique apenas quando o botão é PRESSIONADO (não segurado)
+        mouse_pressed = pygame.mouse.get_pressed()[0]
+        
+        # Se o mouse não está pressionado, libera para próximo clique
+        if not mouse_pressed:
+            self.can_click = True
+            return False
+        
+        # Se está pressionado mas já clicou recentemente, ignora
+        if not self.can_click:
+            return False
+        
+        # Se chegou aqui, é um clique válido
+        if mouse_pressed and self.can_click:
             mouse_pos = pygame.mouse.get_pos()
             
             for index, rect in enumerate(self.rects):
                 if rect.collidepoint(mouse_pos):
+                    # Marca que já clicou (não pode clicar de novo até soltar)
+                    self.can_click = False
+                    self.last_click_time = current_time
+                    
                     # Aplicar upgrade e sinalizar para fechar menu
                     self.apply_upgrade(self.options[index])
                     
@@ -170,6 +196,7 @@ class UpgradeConsole:
                     # Pequeno delay para não atirar assim que sair do menu
                     pygame.time.wait(200) 
                     return True
+        
         return False
     
 class DialogueSystem:

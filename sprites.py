@@ -52,7 +52,7 @@ def list_enemy_images():
     return ENEMY_IMAGE_SOURCES.copy()
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, pos, groups, enemy_sprites, create_projectile_func):
+    def __init__(self, pos, groups, enemy_sprites, create_projectile_func, sound_manager=None):
         super().__init__(groups)
 
         # --------- IMAGEM DO TUX PARA A UI (base_image) ----------
@@ -92,6 +92,9 @@ class Player(pygame.sprite.Sprite):
         self.create_projectile = create_projectile_func
         self.can_shoot = True
         self.shoot_time = 0
+        
+        # Som
+        self.sound_manager = sound_manager
 
         # Sistema de level
         self.xp = 0
@@ -317,7 +320,7 @@ class Player(pygame.sprite.Sprite):
 
 
 class Malware(pygame.sprite.Sprite):
-    def __init__(self, pos, player, groups):
+    def __init__(self, pos, player, groups, health_mult=1.0, speed_mult=1.0, damage_mult=1.0):
         super().__init__(groups)
         
         # Carregar spritesheet do inimigo
@@ -325,11 +328,14 @@ class Malware(pygame.sprite.Sprite):
         self.image = self.walk_frames[0]
         self.rect = self.image.get_rect(center=pos)
 
-        self.health = ENEMY_HEALTH
+        # Aplica multiplicadores de dificuldade
+        self.health = int(ENEMY_HEALTH * health_mult)
+        self.max_health = self.health
+        self.damage = int(ENEMY_DAMAGE * damage_mult)
 
         # Mecânica de perseguição
         self.player = player
-        self.speed = ENEMY_SPEED
+        self.speed = ENEMY_SPEED * speed_mult
         self.direction = pygame.math.Vector2()
 
         # Animação

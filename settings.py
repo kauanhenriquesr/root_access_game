@@ -44,3 +44,14 @@ DATA_VALUE = 10          # Quanto XP cada item dá
 
 # Paths
 PATH_SPRITES = "assets/graphics/"
+
+# Sistema de Hordas
+WAVE_BASE_ENEMIES = 5           # Número inicial de inimigos na primeira horda
+WAVE_ENEMY_INCREMENT = 6        # Quantos inimigos a mais por horda
+WAVE_BREAK_TIME = 3000          # Tempo de descanso entre hordas (ms)
+WAVE_DIFFICULTY_MULTIPLIER = 1.15  # Multiplicador de dificuldade por horda
+
+# Escalamento de dificuldade dos inimigos por horda
+WAVE_HEALTH_MULTIPLIER = 1.2    # Aumento de vida por horda
+WAVE_SPEED_MULTIPLIER = 1.08    # Aumento de velocidade por horda
+WAVE_DAMAGE_MULTIPLIER = 1.1    # Aumento de dano por horda
