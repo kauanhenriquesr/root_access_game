@@ -28,6 +28,7 @@ ENEMY_HEALTH = 50     # Vida do inimigo
 SPAWN_RATE = 500      # Milissegundos entre cada spawn (quanto menor, mais difícil)
 
 #Stats do Tiro
+PROJECTILE_SIZE = 10
 PROJECTILE_SPEED = 10
 PROJECTILE_LIFETIME = 1000 # Milissegundos que o tiro dura antes de sumir
 PROJECTILE_DAMAGE = 25
@@ -40,3 +41,17 @@ COLOR_XP = (170, 255, 0) # Verde brilhante
 XP_SIZE = 8
 MAGNET_RADIUS = 150      # Distância em pixels para o item começar a voar até o player
 DATA_VALUE = 10          # Quanto XP cada item dá
+
+# Paths
+PATH_SPRITES = "assets/graphics/"
+
+# Sistema de Hordas
+WAVE_BASE_ENEMIES = 5           # Número inicial de inimigos na primeira horda
+WAVE_ENEMY_INCREMENT = 6        # Quantos inimigos a mais por horda
+WAVE_BREAK_TIME = 3000          # Tempo de descanso entre hordas (ms)
+WAVE_DIFFICULTY_MULTIPLIER = 1.15  # Multiplicador de dificuldade por horda
+
+# Escalamento de dificuldade dos inimigos por horda
+WAVE_HEALTH_MULTIPLIER = 1.2    # Aumento de vida por horda
+WAVE_SPEED_MULTIPLIER = 1.08    # Aumento de velocidade por horda
+WAVE_DAMAGE_MULTIPLIER = 1.1    # Aumento de dano por horda
