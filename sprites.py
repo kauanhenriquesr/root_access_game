@@ -69,6 +69,23 @@ class Player(pygame.sprite.Sprite):
             self.direction = self.direction.normalize()
         
         self.rect.center += self.direction * speed
+        
+        # Limita o movimento dentro do mapa (2000x2000)
+        map_size = 2000
+        half_width = self.rect.width // 2
+        half_height = self.rect.height // 2
+        
+        # Limita X
+        if self.rect.centerx < half_width:
+            self.rect.centerx = half_width
+        elif self.rect.centerx > map_size - half_width:
+            self.rect.centerx = map_size - half_width
+        
+        # Limita Y
+        if self.rect.centery < half_height:
+            self.rect.centery = half_height
+        elif self.rect.centery > map_size - half_height:
+            self.rect.centery = map_size - half_height
 
     def take_damage(self, amount):
         if self.vulnerable:
