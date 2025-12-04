@@ -101,6 +101,10 @@ class Player(pygame.sprite.Sprite):
         self.level = 1
         self.xp_to_next_level = 100
 
+
+        # Upgrades
+        self.upgrades_history = []
+
         # Atributos do player
         self.speed = PLAYER_SPEED
         self.max_integrity = PLAYER_MAX_INTEGRITY

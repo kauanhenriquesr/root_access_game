@@ -78,6 +78,10 @@ class UpgradeConsole:
         elif upgrade['type'] == 'damage':
             self.player.projectile_damage += upgrade['value']
 
+        
+        log_entry = f"> {upgrade['name']} ({upgrade['desc']})"
+        self.player.upgrades_history.append(log_entry)
+
     def display(self):
         # 1. Configuração da Janela
         width = 700
@@ -325,3 +329,101 @@ class GameOverScreen:
             prompt_surf = self.text_font.render(prompt_text, True, (0, 255, 0)) # Verde Esperança
             prompt_rect = prompt_surf.get_rect(center=(center_x, HEIGHT - 150))
             self.display_surface.blit(prompt_surf, prompt_rect)
+
+class VictoryScreen:
+    def __init__(self):
+        self.display_surface = pygame.display.get_surface()
+        self.title_font = pygame.font.SysFont("consolas", 60, bold=True)
+        self.text_font = pygame.font.SysFont("consolas", 24)
+        
+    def display(self):
+        # 1. Fundo Semi-transparente Verde (Sucesso Matrix)
+        overlay = pygame.Surface((WIDTH, HEIGHT))
+        overlay.fill((0, 20, 10)) # Fundo verde muito escuro
+        overlay.set_alpha(230)
+        self.display_surface.blit(overlay, (0, 0))
+
+        # 2. Borda de Sucesso
+        pygame.draw.rect(self.display_surface, (0, 255, 0), (50, 50, WIDTH-100, HEIGHT-100), 4)
+        
+        # 3. Textos
+        center_x = WIDTH // 2
+        
+        # Título
+        title_surf = self.title_font.render("SYSTEM SECURED", True, (0, 255, 0))
+        title_rect = title_surf.get_rect(center=(center_x, 150))
+        self.display_surface.blit(title_surf, title_rect)
+        
+        # Mensagem Principal
+        msg_lines = [
+            "STATUS: Ameaças eliminadas.",
+            "--------------------------------------------------",
+            "RELATÓRIO DE INCIDENTE:",
+            "Integridade dos dados preservada.",
+            "Backdoors fechados. Firewalls reforçados.",
+            "BÔNUS DE PERFORMANCE APLICADO: PROMOÇÃO CONCEDIDA.",
+        ]
+        
+        for i, line in enumerate(msg_lines):
+            # A última linha (Promoção) em Ciano para destaque
+            color = (150, 255, 150) if i != 5 else (0, 255, 255) 
+            text_surf = self.text_font.render(line, True, color)
+            text_rect = text_surf.get_rect(center=(center_x, 280 + (i * 40)))
+            self.display_surface.blit(text_surf, text_rect)
+
+        # 4. Botão de Reinício
+        current_time = pygame.time.get_ticks()
+        if (current_time // 500) % 2 == 0: 
+            prompt_text = "Pressione [ESPAÇO] para Iniciar Novo Turno"
+            prompt_surf = self.text_font.render(prompt_text, True, (255, 255, 255))
+            prompt_rect = prompt_surf.get_rect(center=(center_x, HEIGHT - 150))
+            self.display_surface.blit(prompt_surf, prompt_rect)
+
+class PauseScreen:
+    def __init__(self, player):
+        self.player = player
+        self.display_surface = pygame.display.get_surface()
+        self.title_font = pygame.font.SysFont("consolas", 50, bold=True)
+        self.list_font = pygame.font.SysFont("consolas", 20)
+        self.info_font = pygame.font.SysFont("arial", 16)
+
+    def display(self):
+        # 1. Overlay Escuro
+        overlay = pygame.Surface((WIDTH, HEIGHT))
+        overlay.fill((0, 0, 20)) 
+        overlay.set_alpha(240)
+        self.display_surface.blit(overlay, (0, 0))
+
+        # 2. Borda e Título
+        border_rect = pygame.Rect(50, 50, WIDTH-100, HEIGHT-100)
+        pygame.draw.rect(self.display_surface, (0, 100, 255), border_rect, 3) # Azul Sistema
+        
+        title_surf = self.title_font.render("SISTEMA SUSPENSO", True, (0, 200, 255))
+        title_rect = title_surf.get_rect(center=(WIDTH//2, 100))
+        self.display_surface.blit(title_surf, title_rect)
+
+        # 3. Lista de Upgrades (Histórico)
+        list_start_y = 180
+        list_x = 100
+        
+        header = self.list_font.render("PATCHES INSTALADOS E MÓDULOS ATIVOS:", True, (255, 255, 255))
+        self.display_surface.blit(header, (list_x, list_start_y))
+        
+        # Desenha a lista (limitada aos ultimos 15 para não vazar a tela)
+        history = self.player.upgrades_history[-15:] 
+        
+        if not history:
+            no_upgrades = self.list_font.render("> Nenhum patch instalado. Sistema vulnerável.", True, (150, 150, 150))
+            self.display_surface.blit(no_upgrades, (list_x + 20, list_start_y + 40))
+        else:
+            for i, item in enumerate(history):
+                text_surf = self.list_font.render(item, True, (0, 255, 0)) # Verde terminal
+                self.display_surface.blit(text_surf, (list_x + 20, list_start_y + 40 + (i * 25)))
+
+        # 4. Rodapé
+        footer_text = "Pressione [ESC] para retomar a execução do kernel..."
+        current_time = pygame.time.get_ticks()
+        if (current_time // 800) % 2 == 0:
+            footer_surf = self.info_font.render(footer_text, True, (255, 255, 255))
+            footer_rect = footer_surf.get_rect(center=(WIDTH//2, HEIGHT - 80))
+            self.display_surface.blit(footer_surf, footer_rect)

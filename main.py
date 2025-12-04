@@ -1,9 +1,28 @@
 import pygame, sys, random, math
 from settings import *
 from sprites import Player, Malware, Projectile, DataDrop
-from ui import UpgradeConsole, DialogueSystem, GameOverScreen
+from ui import UpgradeConsole, DialogueSystem, GameOverScreen, VictoryScreen, PauseScreen
 from sound_manager import SoundManager
 import sprites
+
+WAVE_TIPS = {
+    5: "Atenção! Detectamos varreduras de porta (Port Scanning). Eles estão usando o NMAP para mapear nossos serviços.",
+    6: "Eles estão analisando o TTL dos pacotes (Fingerprinting). Estão tentando descobrir qual é o nosso Sistema Operacional.",
+    7: "Fase de Enumeração iniciada! Estão listando nossos usuários e compartilhamentos. Reduza a superfície de ataque!",
+    8: "Alerta de BRUTE FORCE! Tentativas massivas de login detectadas. Espero que nossas senhas sejam fortes.",
+    9: "Tem um SNIFFER na rede! Alguém está interceptando tráfego não criptografado. Use apenas SSH e HTTPS!",
+    10: "Perigo de ARP POISONING! O atacante está se passando pelo roteador (Man-in-the-Middle) para ler nossos dados.",
+    11: "Tentativa de SQL INJECTION! Estão injetando comandos no banco de dados. Valide todas as entradas de usuário!",
+    12: "Ataque XSS (Cross-Site Scripting)! Scripts maliciosos estão roubando cookies de sessão dos nossos usuários.",
+    13: "Vulnerabilidade crítica: BUFFER OVERFLOW! Um serviço travou e permitiu execução de código remoto. Aplique o patch!",
+    14: "Eles estão usando o METASPLOIT! Frameworks automatizados estão explorando falhas conhecidas no sistema.",
+    15: "O tráfego explodiu! Ataque de NEGAÇÃO DE SERVIÇO (DoS). Eles querem derrubar o servidor por exaustão.",
+    16: "Ataque SYN FLOOD! Milhares de conexões 'zumbis' estão lotando nossa tabela de estado. O servidor vai travar!",
+    17: "Eles querem persistência! Estão tentando instalar BACKDOORS para garantir o retorno mesmo se mudarmos as senhas.",
+    18: "Tentativa de ESCALADA DE PRIVILÉGIO! Eles querem virar ROOT. Se conseguirem, terão controle total da máquina.",
+    19: "Ativei os HONEYPOTS! Servidores falsos para atrair o atacante e nos dar tempo de resposta.",
+    20: "Eles estão recuando! Agora vão tentar APAGAR OS LOGS para dificultar a perícia. Proteja as evidências!"
+}
 
 class WaveManager:
     """Gerencia o sistema de hordas do jogo"""
@@ -22,6 +41,10 @@ class WaveManager:
         self.health_multiplier = 1.0
         self.speed_multiplier = 1.0
         self.damage_multiplier = 1.0
+
+        # Flag para indicar que uma dica deve ser mostrada
+        self.show_tip_trigger = False 
+        self.tip_text = ""
     
     def start_wave(self, sound_manager=None):
         """Inicia uma nova horda"""
@@ -47,26 +70,32 @@ class WaveManager:
         print(f"Inimigos: {self.enemies_in_wave}")
         print(f"Dificuldade: x{round(self.health_multiplier, 2)}")
         print(f"{'='*50}\n")
+
+        
     
     def end_wave(self):
         """Finaliza a horda atual e inicia o intervalo"""
+        
+        if self.current_wave >= 5:
+            tip = WAVE_TIPS.get(self.current_wave, "Análise de tráfego concluída. Nenhuma anomalia crítica.")
+            self.tip_text = tip
+            self.show_tip_trigger = True 
+        
         self.wave_active = False
         self.wave_break = True
         self.break_start_time = pygame.time.get_ticks()
-        self.current_wave += 1
         
-        print(f"\n{'='*50}")
-        print(f"HORDA {self.current_wave - 1} COMPLETA!")
-        print(f"Preparando próxima horda...")
-        print(f"{'='*50}\n")
+        # Prepara para a próxima
+        self.current_wave += 1
     
     def update(self):
         """Atualiza o estado do gerenciador de hordas"""
         # Se está no intervalo, verifica se acabou
         if self.wave_break:
-            current_time = pygame.time.get_ticks()
-            if current_time - self.break_start_time >= WAVE_BREAK_TIME:
-                self.start_wave(sound_manager=None)
+            if not self.show_tip_trigger:
+                # 3 segundos de intervalo entre hordas iniciais
+                if pygame.time.get_ticks() - self.break_start_time >= 3000:
+                    return True
         
         # Se a horda está ativa e todos os inimigos foram mortos
         elif self.wave_active:
@@ -125,16 +154,21 @@ class Game:
         self.dialogue_system = DialogueSystem(self.player)
         self.upgrade_console = UpgradeConsole(self.player, self.dialogue_system, self.sound_manager)
         self.game_over_screen = GameOverScreen()
+        self.victory_screen = VictoryScreen()
+        self.pause_screen = PauseScreen(self.player)
         
         # Estados do Jogo
         self.game_paused = False
         self.pause_menu = False
         self.game_over = False
+        self.game_won = False
+        self.showing_wave_tip = False
 
         # Historia inicial
+        # 2. HISTÓRIA REESCRITA (Mais imersiva e profissional)
         self.show_story = True
-        self.story_text1 = "Olá estagiário! Sei que é seu primeiro dia, mas justo hoje estamos sofrendo invasão no servidor principal. Use suas habilidades para eliminar as ameaças e fortalecer nossa segurança. A empresa INTEIRA DEPENDE de você!"
-        self.story_text2 = "Use as setas ou WASD para se mover. Você deve enviar pacotes aos invasores e identificá-los. Após sua identificação, o sistema bloqueia seu endereço por firewall. Colete os dados para subir de nível e aplicar patches no sistema."
+        self.story_text1 = "Atenção, estagiário: detectamos tráfego anômalo na borda da rede. Se deixarmos esses pacotes passarem, a Disponibilidade dos nossos serviços será comprometida. O servidor não pode cair!"
+        self.story_text2 = "Use WASD para navegar na malha de rede. Sua tarefa é mitigar os danos. Use os protocolos de defesa para neutralizar as conexões maliciosas. Colete os logs (XP) para aplicar patches de segurança manter a Integridade do sistema. Os nossos dados não podem ser corrompidos."
         self.start_time = pygame.time.get_ticks()
         self.first_enemies_killed = 0 
         
@@ -199,10 +233,8 @@ class Game:
 
     def pause(self):
         self.pause_menu = True
-        font = pygame.font.SysFont(None, 74)
-        text = font.render('Pause Básico', True, COLOR_TEXT)
-        text_rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
         
+        self.pause_screen.display()
         while self.pause_menu:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -211,8 +243,6 @@ class Game:
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         self.pause_menu = False
-            self.screen.fill(COLOR_BG)
-            self.screen.blit(text, text_rect)
             pygame.display.update()
             self.clock.tick(15)
 
@@ -223,40 +253,77 @@ class Game:
                     pygame.quit()
                     sys.exit()
 
-                if self.game_over:
+                # INPUT DE GAME OVER OU VITÓRIA
+                if self.game_over or self.game_won:
                     if event.type == pygame.KEYDOWN:
                         if event.key == pygame.K_SPACE:
                             self.reset_game()
-                
-                # Quando o timer disparar, crie um inimigo
-                if event.type == self.enemy_spawn_event and not self.game_paused and not self.show_story:
-                    self.spawn_enemy()
                 
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         # Jogo pausado
                         self.pause()
+                
+                # Avançar Dica da Horda (ESPAÇO)
+                if self.showing_wave_tip and event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_SPACE:
+                        self.showing_wave_tip = False
+                        # Se passou da horda 10, vence o jogo
+                        self.wave_manager.start_wave(self.sound_manager)
+                    
+                    # Quando o timer disparar, crie um inimigo
+                if event.type == self.enemy_spawn_event and not self.game_paused and not self.show_story and not self.game_over and not self.game_won and not self.showing_wave_tip:
+                    self.spawn_enemy()
             
             self.screen.fill(COLOR_BG)
 
 
+            # LÓGICA DE VITÓRIA / DERROTA
             if self.game_over:
-                # Desenha o jogo congelado ao fundo (opcional)
                 self.visible_sprites.custom_draw(self.player)
-                # Desenha a tela de Game Over por cima
                 self.game_over_screen.display()
+            
+            elif self.game_won:
+                # Desenha o jogo ao fundo
+                self.visible_sprites.custom_draw(self.player)
+                # Desenha tela de vitória
+                self.victory_screen.display()
         
             elif self.game_paused:
-
-                 # == Menu de Upgrades ==
-                self.visible_sprites.custom_draw(self.player)
-                self.upgrade_console.display()
-                if self.upgrade_console.update():
+                 self.visible_sprites.custom_draw(self.player)
+                 self.upgrade_console.display()
+                 if self.upgrade_console.update():
                     self.game_paused = False
             
-            else: 
-                # Atualiza o gerenciador de hordas
-                self.wave_manager.update()
+            elif self.showing_wave_tip:
+                # Intervalo entre hordas (Tux fala)
+                self.visible_sprites.custom_draw(self.player)
+                
+                # Relatório de Horda
+                title_tip = f"TUX AI [RELATÓRIO HORDA {self.wave_manager.current_wave - 1}]:"
+                text_tip = self.wave_manager.tip_text + " (Pressione ESPAÇO para continuar)"
+                
+                self.dialogue_system.execute(text_tip, title_tip)
+
+            else:
+                
+                should_start = self.wave_manager.update()
+                
+                # Se for para começar horda automaticamente (hordas < 5)
+                if should_start:
+                    self.wave_manager.start_wave(self.sound_manager)
+                
+                # Se for para mostrar dica (horda >= 5)
+                if self.wave_manager.show_tip_trigger:
+                    self.showing_wave_tip = True
+                    self.wave_manager.show_tip_trigger = False
+
+
+                if self.wave_manager.current_wave > 10:
+                    self.game_won = True
+                    self.sound_manager.stop_music()
+                    self.sound_manager.play_upgrade() 
+                    print("SISTEMA SEGURO. AMEAÇA ELIMINADA.")
                 
                 self.active_sprites.update()
                 # ROTINA NORMAL DE JOGO
@@ -331,7 +398,7 @@ class Game:
                 
                 if pygame.time.get_ticks() - self.first_enemies_killed  < 10000 and self.enemies_killed > 20:
                     self.dialogue_system.execute(
-                        "Excelente trabalho! Com essas ameaças encontradas, nosso sistema está mais seguro. Continue assim e não hesite em usar o console de upgrades para fortalecer ainda mais nossas defesas.",
+                        "Excelente trabalho! Com essas ameaças controladas, nosso sistema está mais seguro. Continue assim e não hesite em usar o console de upgrades para fortalecer ainda mais nossas defesas.",
                         "TUX AI [SISTEMA ESTÁVEL]:"
                     )
 
@@ -351,10 +418,13 @@ class Game:
         # 2. Recria o setup inicial (Recria o player do zero)
         self.setup_system()
         self.game_over = False
+        self.game_won = False
         self.start_time = pygame.time.get_ticks() # Reinicia timer da história
         self.show_story = True
         self.enemies_killed = 0
         self.upgrade_console = UpgradeConsole(self.player, self.dialogue_system, self.sound_manager)
+        self.pause_screen = PauseScreen(self.player)
+        self.dialogue_system = DialogueSystem(self.player)
         
         # 3. Reinicia o sistema de hordas
         self.wave_manager = WaveManager()
@@ -417,7 +487,7 @@ class Game:
         pygame.draw.rect(self.screen, (255, 255, 255), bg_rect, 1)
         
         # --- Informações da Horda ---
-        font = pygame.font.SysFont(None, 32)
+        font = pygame.font.SysFont("consolas", 24)
         
         # Exibe o número da horda
         wave_text = font.render(f"HORDA: {self.wave_manager.current_wave}", True, COLOR_TEXT)
