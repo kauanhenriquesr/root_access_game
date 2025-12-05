@@ -416,11 +416,11 @@ class Game:
         self.projectile_sprites.empty()
         self.data_sprites.empty()
         
-        # 2. Recria o setup inicial (Recria o player do zero)
+        # 2. Recria o setup inicial
         self.setup_system()
         self.game_over = False
         self.game_won = False
-        self.start_time = pygame.time.get_ticks() # Reinicia timer da história
+        self.start_time = pygame.time.get_ticks()
         self.show_story = True
         self.enemies_killed = 0
         self.upgrade_console = UpgradeConsole(self.player, self.dialogue_system, self.sound_manager)
@@ -435,6 +435,10 @@ class Game:
         self.sound_manager.play_music(loop=-1)
         
         print("SISTEMA REINICIALIZADO.")
+
+        # 5. Volta para a tela inicial
+        self.show_start_screen()
+
 
     def draw_ui(self):
         # --- Barra de Vida --- (Integridade do Sistema)
