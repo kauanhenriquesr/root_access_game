@@ -42,9 +42,6 @@ XP_SIZE = 8
 MAGNET_RADIUS = 150      # Distância em pixels para o item começar a voar até o player
 DATA_VALUE = 10          # Quanto XP cada item dá
 
-# Paths
-PATH_SPRITES = "assets/graphics/"
-
 # Sistema de Hordas
 WAVE_BASE_ENEMIES = 5           # Número inicial de inimigos na primeira horda
 WAVE_ENEMY_INCREMENT = 6        # Quantos inimigos a mais por horda

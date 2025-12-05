@@ -1,28 +1,22 @@
 import pygame, sys, random, math
 from settings import *
 from sprites import Player, Malware, Projectile, DataDrop
-from ui import UpgradeConsole, DialogueSystem, GameOverScreen, VictoryScreen, PauseScreen
+from ui import UpgradeConsole, DialogueSystem, GameOverScreen, VictoryScreen, PauseScreen, StartScreen
 from sound_manager import SoundManager
 import sprites
 
 WAVE_TIPS = {
-    5: "Atenção! Detectamos varreduras de porta (Port Scanning). Eles estão usando o NMAP para mapear nossos serviços.",
-    6: "Eles estão analisando o TTL dos pacotes (Fingerprinting). Estão tentando descobrir qual é o nosso Sistema Operacional.",
-    7: "Fase de Enumeração iniciada! Estão listando nossos usuários e compartilhamentos. Reduza a superfície de ataque!",
-    8: "Alerta de BRUTE FORCE! Tentativas massivas de login detectadas. Espero que nossas senhas sejam fortes.",
-    9: "Tem um SNIFFER na rede! Alguém está interceptando tráfego não criptografado. Use apenas SSH e HTTPS!",
-    10: "Perigo de ARP POISONING! O atacante está se passando pelo roteador (Man-in-the-Middle) para ler nossos dados.",
-    11: "Tentativa de SQL INJECTION! Estão injetando comandos no banco de dados. Valide todas as entradas de usuário!",
-    12: "Ataque XSS (Cross-Site Scripting)! Scripts maliciosos estão roubando cookies de sessão dos nossos usuários.",
-    13: "Vulnerabilidade crítica: BUFFER OVERFLOW! Um serviço travou e permitiu execução de código remoto. Aplique o patch!",
-    14: "Eles estão usando o METASPLOIT! Frameworks automatizados estão explorando falhas conhecidas no sistema.",
-    15: "O tráfego explodiu! Ataque de NEGAÇÃO DE SERVIÇO (DoS). Eles querem derrubar o servidor por exaustão.",
-    16: "Ataque SYN FLOOD! Milhares de conexões 'zumbis' estão lotando nossa tabela de estado. O servidor vai travar!",
-    17: "Eles querem persistência! Estão tentando instalar BACKDOORS para garantir o retorno mesmo se mudarmos as senhas.",
-    18: "Tentativa de ESCALADA DE PRIVILÉGIO! Eles querem virar ROOT. Se conseguirem, terão controle total da máquina.",
-    19: "Ativei os HONEYPOTS! Servidores falsos para atrair o atacante e nos dar tempo de resposta.",
-    20: "Eles estão recuando! Agora vão tentar APAGAR OS LOGS para dificultar a perícia. Proteja as evidências!"
+    2: "Alerta! Estão fazendo varredura de portas (port scanning) com Nmap pra descobrir quais serviços a gente deixou aberto. Dica: só deixe liberado o que realmente for necessário.",
+    3: "Começou a ENUMERAÇÃO! Estão tentando listar usuários, serviços e compartilhamentos. Menos coisa exposta = menos lugar pra atacar. Desative o que não for usado.",
+    4: "BRUTE FORCE na área! Milhares de tentativas de senha por segundo. Senhas fortes + limite de tentativas + autenticação em duas etapas salvam a conta.",
+    5: "Tem SNIFFER na rede! Se o tráfego não for criptografado, dá pra ler tudo. Use sempre HTTPS, SSH e outras conexões seguras. Nada de senha em texto puro.",
+    6: "Possível ARP POISONING! O invasor está tentando se passar pelo roteador pra ficar no meio da conversa (man-in-the-middle). Onde der, use conexões criptografadas de ponta a ponta.",
+    7: "Tentativa de SQL INJECTION detectada! Estão mandando comandos maliciosos pelos campos de formulário. Regra de ouro: nunca confiar na entrada do usuário, sempre validar e tratar.",
+    8: "Ataque XSS (Cross-Site Scripting)! Scripts maliciosos estão rodando na tela do usuário pra roubar sessão ou enganar visualmente. Filtre o que é exibido e não deixe código vir direto da entrada.",
+    9: "O tráfego explodiu de repente: cheira a ataque de NEGAÇÃO DE SERVIÇO (DoS/DDoS). A ideia é derrubar o servidor pelo cansaço. Limitar pedidos e usar filtros ajuda a segurar a onda.",
+    10: "Eles querem persistência no sistema! Tentam instalar backdoors e apagar logs pra voltar depois sem serem notados. Manter registros seguros e ferramentas de segurança ativas é essencial."
 }
+
 
 class WaveManager:
     """Gerencia o sistema de hordas do jogo"""
@@ -76,7 +70,7 @@ class WaveManager:
     def end_wave(self):
         """Finaliza a horda atual e inicia o intervalo"""
         
-        if self.current_wave >= 5:
+        if self.current_wave >= 2:
             tip = WAVE_TIPS.get(self.current_wave, "Análise de tráfego concluída. Nenhuma anomalia crítica.")
             self.tip_text = tip
             self.show_tip_trigger = True 
@@ -156,7 +150,14 @@ class Game:
         self.game_over_screen = GameOverScreen()
         self.victory_screen = VictoryScreen()
         self.pause_screen = PauseScreen(self.player)
+        self.start_screen = StartScreen()
         
+        # (opcional) iniciar música de fundo já no menu:
+        self.sound_manager.play_music(loop=-1)
+
+        # Mostrar tela inicial antes de começar o jogo
+        self.show_start_screen()
+
         # Estados do Jogo
         self.game_paused = False
         self.pause_menu = False
@@ -167,7 +168,7 @@ class Game:
         # Historia inicial
         # 2. HISTÓRIA REESCRITA (Mais imersiva e profissional)
         self.show_story = True
-        self.story_text1 = "Atenção, estagiário: detectamos tráfego anômalo na borda da rede. Se deixarmos esses pacotes passarem, a Disponibilidade dos nossos serviços será comprometida. O servidor não pode cair!"
+        self.story_text1 = "Atenção, estagiário: detectamos tráfego não desejado na borda da rede. Se deixarmos esses pacotes passarem, a disponibilidade dos nossos serviços será comprometida. O servidor não pode cair!"
         self.story_text2 = "Use WASD para navegar na malha de rede. Sua tarefa é mitigar os danos. Use os protocolos de defesa para neutralizar as conexões maliciosas. Colete os logs (XP) para aplicar patches de segurança manter a Integridade do sistema. Os nossos dados não podem ser corrompidos."
         self.start_time = pygame.time.get_ticks()
         self.first_enemies_killed = 0 
@@ -503,6 +504,30 @@ class Game:
             remaining = self.wave_manager.get_remaining_enemies()
             enemies_text = font.render(f"Inimigos: {remaining}/{self.wave_manager.enemies_in_wave}", True, (255, 100, 100))
             self.screen.blit(enemies_text, (WIDTH - 220, 60))
+
+    def show_start_screen(self):
+        showing = True
+        while showing:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                if event.type == pygame.KEYDOWN:
+                    if event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                        showing = False   # Sai da tela inicial e começa o jogo
+                    elif event.key == pygame.K_ESCAPE:
+                        pygame.quit()
+                        sys.exit()
+
+            # Fundo e tela inicial
+            self.screen.fill(COLOR_BG)
+            self.start_screen.display()
+
+            pygame.display.update()
+            self.clock.tick(30)
+
+
+
 # --- Classe de Câmera Simples ---
 class CameraGroup(pygame.sprite.Group):
     def __init__(self):

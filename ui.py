@@ -1,5 +1,6 @@
 import pygame
 import random
+import os
 from settings import *
 
 class UpgradeConsole:
@@ -33,33 +34,50 @@ class UpgradeConsole:
         pool = [
             {
                 'name': f'apt-get upgrade speed_v{p.level}', 
-                'desc': 'Aumenta velocidade de movimento (+10%)', 
+                'desc': 'Você se move 10% mais rápido.', 
                 'type': 'speed',
                 'value': 1.1,
-                'edu_text': 'Conceito: GESTÃO DE PACOTES (APT). Manter softwares atualizados via repositórios seguros garante que o sistema opere com as correções de performance mais recentes, evitando lentidão na resposta a incidentes.'
+                'edu_text': (
+                    'Conceito: atualização de programas. Manter o sistema sempre atualizado, '
+                    'baixando pacotes de lugares confiáveis, deixa tudo mais rápido e mais protegido '
+                    'contra falhas e ataques.'
+                )
             },
             {
                 'name': f'nmap -T{min(p.level, 5)} --min-rtt-timeout',
-                'desc': 'Reduz delay de disparo (-15%)', 
+                'desc': 'Diminui o tempo de recarga dos tiros em 15%.', 
                 'type': 'cooldown', 
                 'value': 0.85,
-                'edu_text': f'Conceito: TIMING TEMPLATES (-T). O Nmap usa templates de 0 a 5 para definir a agressividade da varredura. Ajustar o RTT (Round-Trip Time) permite enviar pacotes mais rápido, otimizando a detecção de ameaças na rede.'
+                'edu_text': (
+                    'Conceito: tempo de varredura. No Nmap, a opção -T controla se o scan é mais lento '
+                    'ou mais agressivo. Ajustar o tempo de resposta (RTT) ajuda a encontrar serviços '
+                    'na rede mais rápido, sem ficar desperdiçando pacote à toa.'
+                )
             },
             {
                 'name': f'kernel_patch_v{(p.max_integrity+20)/100:.1f}_security_fix', 
-                'desc': 'Aumenta integridade máxima (+20)', 
+                'desc': 'Aumenta sua vida máxima em 20 pontos.', 
                 'type': 'health', 
                 'value': 20,
-                'edu_text': 'Conceito: KERNEL HARDENING. O Kernel é o núcleo do sistema. Aplicar patches de segurança corrige vulnerabilidades críticas (CVEs), tornando o servidor mais resistente a falhas e tentativas de derrubada (Crash).'
+                'edu_text': (
+                    'Conceito: correção de segurança no kernel. O kernel é o “coração” do sistema '
+                    'operacional. Aplicar patches fecha brechas conhecidas e deixa o servidor mais '
+                    'estável e difícil de derrubar em um ataque.'
+                )
             },
             {
                 'name': f'nmap {scan_flag} --max-rate {int(p.projectile_damage + 5)}', 
-                'desc': f'Aumenta payload de pacotes {proto_name} (+5)', 
+                'desc': f'Aumenta o dano dos pacotes {proto_name} em +5.', 
                 'type': 'damage', 
                 'value': 5,
-                'edu_text': f'Conceito: RATE LIMITING & PAYLOADS. No nmap, definir o --max-rate controla a taxa de envio de pacotes. Em segurança ofensiva, aumentar a carga (payload) simula testes de estresse para verificar se o firewall inimigo aguenta o tranco.'
+                'edu_text': (
+                    'Conceito: taxa de envio e payload. Em testes de segurança, controlar quantos '
+                    'pacotes você manda por segundo e o tamanho da carga (payload) ajuda a simular '
+                    'ataques e ver se o firewall e o servidor aguentam a pressão.'
+                )
             },
         ]
+
         
         self.options = random.sample(pool, 3)
         self.rects = [] 
@@ -101,7 +119,7 @@ class UpgradeConsole:
         # 3. Loop das Opções
         mouse_pos = pygame.mouse.get_pos()
         self.rects = []
-        hover_text = "Selecione um patch para aplicar ao sistema."
+        hover_text = "Escolha um patch para melhorar a defesa do servidor."
         hover_title = "TUX AI [UPGRADE LOG]:"
 
         if not self.options:
@@ -212,7 +230,8 @@ class DialogueSystem:
         
         self.active = False
         self.current_text = ""
-        self.current_title = "SIEM AI [SYSTEM LOG]:"
+        self.current_title = "TUX AI [LOG DE SEGURANÇA]:"
+
 
     def draw_text_wrapped(self, text, rect, color):
         """Quebra o texto automaticamente para caber na caixa"""
@@ -309,11 +328,11 @@ class GameOverScreen:
         
         # Mensagem Principal
         msg_lines = [
-            "FATAL ERROR: Integridade do Servidor Comprometida.",
+            "FALHA CRÍTICA: o servidor não aguentou o ataque.",
             "--------------------------------------------------",
             "RELATÓRIO DE INCIDENTE:",
             "Os dados cruciais da empresa foram vazados.",
-            "Protocolo de RH ativado: VOCÊ FOI DEMITIDO.",
+            "O time de segurança vai precisar de você de novo. Tente outra estratégia!",
         ]
         
         for i, line in enumerate(msg_lines):
@@ -326,7 +345,7 @@ class GameOverScreen:
         current_time = pygame.time.get_ticks()
         if (current_time // 500) % 2 == 0: # Pisca a cada meio segundo
             prompt_text = "Pressione [ESPAÇO] para Reinicializar o Sistema"
-            prompt_surf = self.text_font.render(prompt_text, True, (0, 255, 0)) # Verde Esperança
+            prompt_surf = self.text_font.render(prompt_text, True, (255, 0, 0))
             prompt_rect = prompt_surf.get_rect(center=(center_x, HEIGHT - 150))
             self.display_surface.blit(prompt_surf, prompt_rect)
 
@@ -427,3 +446,70 @@ class PauseScreen:
             footer_surf = self.info_font.render(footer_text, True, (255, 255, 255))
             footer_rect = footer_surf.get_rect(center=(WIDTH//2, HEIGHT - 80))
             self.display_surface.blit(footer_surf, footer_rect)
+
+
+class StartScreen:
+    def __init__(self):
+        self.display_surface = pygame.display.get_surface()
+        self.title_font = pygame.font.SysFont("consolas", 60, bold=True)
+        self.text_font = pygame.font.SysFont("consolas", 24)
+        self.sub_font = pygame.font.SysFont("consolas", 18)
+
+        base_dir = os.path.dirname(__file__)  # pasta onde está o ui.py
+        icon_path = os.path.join(base_dir, "assets", "security_icon.png")
+
+        try:
+            self.icon_image = pygame.image.load(icon_path).convert_alpha()
+            self.icon_image = pygame.transform.scale(self.icon_image, (120, 120))
+        except Exception:
+            # Se não achar o arquivo ou der erro
+            self.icon_image = pygame.Surface((58, 58), pygame.SRCALPHA)
+            self.icon_image.fill((0, 200, 255))  # bloquinho azul-ciano
+
+
+    def display(self):
+        # 1. Fundo escuro com tom azulado
+        overlay = pygame.Surface((WIDTH, HEIGHT))
+        overlay.fill((0, 0, 20))  # azul bem escuro
+        overlay.set_alpha(230)
+        self.display_surface.blit(overlay, (0, 0))
+
+        # Borda em azul claro
+        pygame.draw.rect(self.display_surface, (0, 180, 255),(50, 50, WIDTH - 100, HEIGHT - 100),4)
+
+        center_x = WIDTH // 2
+
+        # Título principal
+        title_surf = self.title_font.render("SYSTEM ONLINE", True, (0, 200, 255))
+        title_rect = title_surf.get_rect(center=(center_x, 150))
+        self.display_surface.blit(title_surf, title_rect)
+
+        # Mensagem principal (texto que você pediu)
+        msg_lines = [
+            "Bem-vindo ao servidor da empresa, estagiário.",
+            "Pronto para defender o sistema contra os invasores?"
+        ]
+
+        for i, line in enumerate(msg_lines):
+            text_surf = self.text_font.render(line, True, (220, 220, 220))
+            text_rect = text_surf.get_rect(center=(center_x, 260 + i * 35))
+            self.display_surface.blit(text_surf, text_rect)
+
+        # Subtexto
+        sub_line = "< Proteja os dados da empresa a todo custo >"
+        sub_surf = self.sub_font.render(sub_line, True, (0, 200, 255))
+        sub_rect = sub_surf.get_rect(center=(center_x, 340))
+        self.display_surface.blit(sub_surf, sub_rect)
+
+        #Icone de defesa
+        icon_y = (sub_rect.bottom + (HEIGHT - 160)) // 2  # meio do caminho
+        icon_rect = self.icon_image.get_rect(center=(center_x, icon_y))
+        self.display_surface.blit(self.icon_image, icon_rect)
+
+        # Prompt piscando para iniciar
+        current_time = pygame.time.get_ticks()
+        if (current_time // 500) % 2 == 0:
+            prompt_text = "Pressione [ESPAÇO] para Inicializar o Sistema"
+            prompt_surf = self.text_font.render(prompt_text, True, (220, 220, 220))
+            prompt_rect = prompt_surf.get_rect(center=(center_x, HEIGHT - 140))
+            self.display_surface.blit(prompt_surf, prompt_rect)
