@@ -486,7 +486,7 @@ class StartScreen:
 
         # Mensagem principal (texto que você pediu)
         msg_lines = [
-            "Bem-vindo ao servidor da empresa, estagiário.",
+            "Bem-vindo ao servidor da empresa estagiário.",
             "Pronto para defender o sistema contra os invasores?"
         ]
 
