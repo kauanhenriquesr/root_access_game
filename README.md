@@ -6,6 +6,7 @@ Um jogo de sobrevivência em hordas com temática de segurança cibernética, de
 
 **Disciplina:** Informática e Sociedade
 **Instituição:** Universidade de Brasília 
+**Grupo:** 4
 
 ### 👥 Equipe de Desenvolvimento
 
